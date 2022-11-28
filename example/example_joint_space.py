@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import numpy as np
 
-import rospy
+import rclpy
+from rclpy.node import Node
+
+import threading
 
 # LASA Libraries
 import state_representation as sr
@@ -9,12 +12,16 @@ from dynamical_systems import create_cartesian_ds, DYNAMICAL_SYSTEM_TYPE
 from network_interfaces.control_type import ControlType
 from network_interfaces.zmq.network import CommandMessage
 
-# Custom Libraries
-from robot_interface import RobotInterface
+# Custom libraries
+from franka_avoidance.robot_interface import RobotZmqInterface as RobotInterface
 
 
-class JointSpaceController:
-    def __init__(self, robot, freq: float = 100):
+class JointSpaceController(Node):
+    def __init__(self, robot, freq: float = 100, node_name="joint_controller"):
+        super().__init__(node_name)
+        self.robot = robot
+        self.rate = self.create_rate(freq)
+        
         self.command = CommandMessage()
         self.command.control_type = [ControlType.VELOCITY.value]
 
@@ -23,13 +30,10 @@ class JointSpaceController:
             "gain", [50.0, 50.0, 50.0, 10.0, 10.0, 10.0], sr.ParameterType.DOUBLE_ARRAY
         )
 
-        self.rate = rospy.Rate(freq)
-        self.robot = robot
-
     def run(self):
         target_set = False
 
-        while not rospy.is_shutdown():
+        while rclpy.ok():
             state = self.robot.get_state()
             if not state:
                 continue
@@ -48,20 +52,32 @@ class JointSpaceController:
                 )
                 target_set = True
             else:
-                twist = sr.CartesianTwist(ds.evaluate(state.ee_state))
+                twist = sr.CartesianTwist(self.ds.evaluate(state.ee_state))
                 twist.clamp(0.25, 0.5)
                 self.command.joint_state = state.joint_state
                 self.command.joint_state.set_velocities(
                     np.linalg.lstsq(state.jacobian.data(), twist.get_twist())[0]
                 )
-                self.robot.send_command(command)
+                self.robot.send_command(self.command)
                 self.rate.sleep()
 
 
 if __name__ == "__main__":
-    rospy.init_node("test", anonymous=True)
-
+    rclpy.init()
+    # rospy.init_node("test", anonymous=True)
     robot_interface = RobotInterface("*:1601", "*:1602")
 
-    controller = JointSpaceController(robot=robot_interface)
-    controller.run(500)
+    # Spin in a separate thread
+    controller = JointSpaceController(robot=robot_interface, freq=500)
+
+    thread = threading.Thread(target=rclpy.spin, args=(controller, ), daemon=True)
+    thread.start()
+
+    try:
+        controller.run()
+        
+    except KeyboardInterrupt:
+        pass
+
+    rclpy.shutdown()
+    thread.join()

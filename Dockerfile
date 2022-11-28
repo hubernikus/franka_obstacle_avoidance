@@ -16,30 +16,43 @@ RUN sudo apt clean
 WORKDIR /tmp
 RUN git clone -b v1.1.0 --depth 1 https://github.com/aica-technology/network-interfaces.git && \
     cd network-interfaces && sudo bash install.sh --auto --no-cpp
-RUN rm -rf /tmp/network-interfaces
+RUN sudo rm -rf /tmp/network-interfaces
 
-RUN mkdir -p ${HOME}/lib
-WORKDIR ${HOME}/lib
+# RUN mkdir -p ${HOME}/lib
+RUN mkdir ${HOME}/python
 
 # Dynamic Obstacle Avoidance Library [Only minor changes]
+WORKDIR ${HOME}/python
 RUN git clone -b main --single-branch https://github.com/epfl-lasa/dynamic_obstacle_avoidance
-RUN  python3 -m pip install -r dynamic_obstacle_avoidance/requirements.txt
-RUN cd dynamic_obstacle_avoidance && sudo python3 -m pip install --editable .
+WORKDIR ${HOME}/python/dynamic_obstacle_avoidance
+RUN python3 -m pip install -r requirements.txt
+RUN python3 -m pip install --editable .
 
-# Various Tools Library
-RUN git clone -b main --single-branch https://github.com/hubernikus/various_tools
-RUN python3 -m pip install -r various_tools/requirements.txt
-RUN cd various_tools && sudo python3 -m pip install --editable .
+# Various tool
+WORKDIR ${HOME}/python
+RUN git clone -b main --single-branch https://github.com/hubernikus/various_tools.git
+WORKDIR ${HOME}/python/various_tools
+RUN python3 -m pip install -r requirements.txt
+RUN python3 -m pip install --editable .
 
-# Semester-Project-Learning
+# RUN mkdir -p ${HOME}/.ssh
+# ADD /home/lukas/.ssh/id_rsa ${HOME}/.ssh/id_rsa
+# RUN chmod 600 ${HOME}/.ssh/id_rsa
+# RUN ssh-keyscan github.com >> ${HOME}/.ssh/known_hosts
 
-# Semester-Project-Avoiding
-RUN git clone -b main --single-branch https://github.com/TicaGit/semester_project_LASA_trinca.git
+# Semester-Project-Learning [Ekin]
+WORKDIR ${HOME}/python
+# RUN git clone -b main --single-branch git@github.com:MerihEkin/epfl_semester_project_1.git
+# WORKDIR ${HOME}/python/epfl_semester_project_1
 # RUN python3 -m pip install -r requirements.txt
-RUN cd semester_project_LASA_trinca && sudo python3 -m pip install --editable .
+# RUN cd epfl_semester_project_1 && sudo python3 -m pip install --editable .
 
-# Additional Python-Environment
-# RUN pip install beautifulsoup4 lxml
+# Semester-Project-Avoiding [Thibaud]
+WORKDIR ${HOME}/python
+RUN git clone -b main --single-branch https://github.com/TicaGit/semester_project_LASA_trinca.git
+WORKDIR ${HOME}/python/semester_project_LASA_trinca
+# RUN python3 -m pip install -r requirements.txt
+# RUN python3 -m pip install --editable .
 
 # Files are copied indivually to allow compatibility
 # for combo and without docker container
@@ -47,18 +60,19 @@ RUN cd semester_project_LASA_trinca && sudo python3 -m pip install --editable .
 RUN mkdir -p /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
 WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
 
-COPY --chown=${USER} ../examples .
+# Copy the local folder
+COPY --chown=${USER} src src
+COPY --chown=${USER} scripts scripts
+COPY --chown=${USER} examples examples
+# COPY --chown=${USER} local 
 COPY --chown=${USER} requirements.txt requirements.txt
-# COPY --chown=${USER} ../CMakeLists.txt ../package.xml .
-# COPY --chown=${USER} ../launch ./launch
-# COPY --chown=${USER} ../rviz ./rviz
-# COPY --chown=${USER} ../include ./include
-# COPY --chown=${USER} ../scripts ./scripts
-# COPY --chown=${USER} ../src ./src
-# COPY --chown=${USER} ../combined_approach ./combined_approach
-
+COPY --chown=${USER} setup.py setup.py
+# COPY --chown=${USER} setup.cfg setup.cfg
+RUN python3 -m pip install -r requirements.txt
+RUN python3 -m pip install --editable .
 
 WORKDIR /home/${USER}/ros2_ws/
-RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash; colcon build --symlink-install"
+RUN /bin/bash -c "source /opt/ros2/$ROS_DISTRO/setup.bash; colcon build --symlink-install"
 
+WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
 ENTRYPOINT tmux

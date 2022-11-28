@@ -1,5 +1,5 @@
 #!/bin/bash
-docker build -t ros2_franka_avoidance_modulation .
+docker build -t ros2_franka_avoidance .
 
 # install ros package
 

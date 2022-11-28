@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import numpy as np
 
-import rospy
+import rclpy
+from rclpy.node import Node
+
+import threading
 
 import state_representation as sr
 from controllers import create_cartesian_controller, CONTROLLER_TYPE
@@ -10,13 +13,14 @@ from network_interfaces.control_type import ControlType
 from network_interfaces.zmq.network import CommandMessage
 
 # Custom libraries
-from .robot_interface import RobotZmqInterface as RobotInterface
+from franka_avoidance.robot_interface import RobotZmqInterface as RobotInterface
 
 
-class TwistController():
-    def (self, robot, freq: float = 100):
+class TwistController(Node):
+    def __init__(self, robot, freq: float = 100, node_name="twist_controller"):
+        super().__init__(node_name)
         self.robot = robot
-        self.rate = rospy.Rate(freq)
+        self.rate = self.create_rate(freq)
 
         self.command = CommandMessage()
         self.command.control_type = [ControlType.EFFORT.value]
@@ -31,12 +35,11 @@ class TwistController():
         self.ctrl.set_parameter_value("linear_orthogonal_damping", 1.0, sr.ParameterType.DOUBLE)
         self.ctrl.set_parameter_value("angular_stiffness", 0.5, sr.ParameterType.DOUBLE)
         self.ctrl.set_parameter_value("angular_damping", 0.5, sr.ParameterType.DOUBLE)
-        
-        
+
     def run(self):
         target_set = False
 
-        while not rospy.is_shutdown():
+        while rclpy.ok():
             state = self.robot.get_state()
             if not state:
                 continue
@@ -58,19 +61,29 @@ class TwistController():
                     self.ctrl.compute_command(twist, state.ee_state, state.jacobian)
                 )
                 self.command.joint_state = state.joint_state
-                self.command.joint_state.set_torques(command_torques.get_torques())
+                self.command.joint_state.set_torques(self.command_torques.get_torques())
                 
                 self.robot.send_command(self.command)
-                
+
             self.rate.sleep()
 
-
+            
 if __name__ == "__main__":
-    rospy.init_node("test", anonymous=True)
-
+    rclpy.init()
+    # rospy.init_node("test", anonymous=True)
     robot_interface = RobotInterface("*:1601", "*:1602")
-    
-    controller = TwistController(robot=robot_interface, freq=500)
-    controller.run()
 
-    
+    # Spin in a separate thread
+    controller = TwistController(robot=robot_interface, freq=500)
+
+    thread = threading.Thread(target=rclpy.spin, args=(controller, ), daemon=True)
+    thread.start()
+
+    try:
+        controller.run()
+        
+    except KeyboardInterrupt:
+        pass
+
+    rclpy.shutdown()
+    thread.join()
