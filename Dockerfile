@@ -1,105 +1,64 @@
-FROM ros:noetic-ros-base
+ARG ROS_VERSION=humble
+FROM ghcr.io/aica-technology/ros2-control-libraries:${ROS_VERSION}
 
-# install base dependencies
-RUN apt-get update \
-	&& apt-get install --no-install-recommends -y \
-			   autoconf \
-			   automake \
-			   curl \
-			   featherpad \
-			   gdb \
-			   git \
-			   iputils-ping \
-			   libboost-all-dev \
-			   libtool \
-			   mesa-utils \
-			   python3-pip \
-			   ros-${ROS_DISTRO}-xacro \
-			   ros-${ROS_DISTRO}-robot-state-publisher \
-			   ros-${ROS_DISTRO}-rviz2 \
-			   rsync \
-			   software-properties-common \
-			   ssh \
-			   wget \
-	&& rm -rf /var/lib/apt/lists/*
+# upgrade ament_cmake_python
+RUN sudo apt update
+RUN sudo apt install -y ros-${ROS_DISTRO}-ament-cmake-python
 
 # INSTALL NECESSARY PACKAGES
-RUN apt update \
-	&& apt install -y \
-	tmux \
-	vim-python-jedi \
-	nano \
-	# gnupg2 curl lsb-core \ 
-	# libpng16-16 libjpeg-turbo8 libtiff5 \
-	# ros-${ROS_DISTRO}-rviz \
-	&& apt clean
+RUN sudo apt install -y tmux
+RUN sudo apt install -y vim-python-jedi
+RUN sudo apt install nano 
+RUN sudo apt install python-is-python3 -y
+RUN sudo apt clean
 
-# Allow matplotlib-plotting
-RUN apt-get install -y python3-tk
+# Install network inferface [zmq]
+WORKDIR /tmp
+RUN git clone -b v1.1.0 --depth 1 https://github.com/aica-technology/network-interfaces.git && \
+    cd network-interfaces && sudo bash install.sh --auto --no-cpp
+RUN rm -rf /tmp/network-interfaces
 
-# Files are currently just copied -> direct access from github could be done (?)
-# but this would require (stable) tags
-COPY src python
+RUN mkdir -p ${HOME}/lib
+WORKDIR ${HOME}/lib
 
-WORKDIR /python/various_tools
-RUN python3.9 -m pip install -e .
-RUN python3.9 -m pip install -r requirements.txt
+# Dynamic Obstacle Avoidance Library [Only minor changes]
+RUN git clone -b main --single-branch https://github.com/epfl-lasa/dynamic_obstacle_avoidance
+RUN  python3 -m pip install -r dynamic_obstacle_avoidance/requirements.txt
+RUN cd dynamic_obstacle_avoidance && sudo python3 -m pip install --editable .
 
-WORKDIR /python/dynamic_obstacle_avoidance
-RUN python3.9 -m pip install -r requirements.txt
-RUN python3.9 -m pip install -e .
+# Various Tools Library
+RUN git clone -b main --single-branch https://github.com/hubernikus/various_tools
+RUN python3 -m pip install -r various_tools/requirements.txt
+RUN cd various_tools && sudo python3 -m pip install --editable .
 
-WORKDIR /python/fast_obstacle_avoidance
-RUN python3.9 -m pip install -r requirements.txt
-RUN python3.9 -m pip install -e .
+# Semester-Project-Learning
 
-# Resolve few conflicts
-RUN python3.9 -m pip install numpy --upgrade
-RUN python3.9 -m pip install --upgrade scikit-image
+# Semester-Project-Avoiding
+RUN git clone -b main --single-branch https://github.com/TicaGit/semester_project_LASA_trinca.git
+# RUN python3 -m pip install -r requirements.txt
+RUN cd semester_project_LASA_trinca && sudo python3 -m pip install --editable .
 
-# Create a user called ROS
-RUN groupadd -g 1000 ros
-RUN useradd -d /home/ros -s /bin/bash -m ros -u 1000 -g 1000
+# Additional Python-Environment
+# RUN pip install beautifulsoup4 lxml
 
-USER ros
-ENV HOME /home/ros
+# Files are copied indivually to allow compatibility
+# for combo and without docker container
+# This should be changed for production
+RUN mkdir -p /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
+WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
 
-RUN mkdir -p ${HOME}/catkin_ws/src/qolo_fast_modulation/scripts
+COPY --chown=${USER} ../examples .
+COPY --chown=${USER} requirements.txt requirements.txt
+# COPY --chown=${USER} ../CMakeLists.txt ../package.xml .
+# COPY --chown=${USER} ../launch ./launch
+# COPY --chown=${USER} ../rviz ./rviz
+# COPY --chown=${USER} ../include ./include
+# COPY --chown=${USER} ../scripts ./scripts
+# COPY --chown=${USER} ../src ./src
+# COPY --chown=${USER} ../combined_approach ./combined_approach
 
-WORKDIR ${HOME}/catkin_ws/src/qolo_fast_modulation
-# COPY messages src/messages
-COPY requirements.txt requirements.txt
-COPY CMakeLists.txt CMakeLists.txt
 
-# Optional: source could be directly downloaded from git (but no local changes possible...)
-# The source code is already copied to the python directory
-# COPY src src
+WORKDIR /home/${USER}/ros2_ws/
+RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash; colcon build --symlink-install"
 
-# Local environment to allow for installation
-# RUN python3.9 -m venv env
-# RUN source ./env/bin/activate
-
-# COPY scripts scripts
-# Set ROS environment -> 
-# ENV ROS_MASTER_URI=http://128.179.186.206:11311
-
-# ROS environment for QOLO
-# ENV ROS_MASTER_URI=http://128.179.186.206:11311
-
-USER ros
-WORKDIR ${HOME}/catkin_ws
-# RUN /bin/bash -c '. /opt/ros/melodic/setup.bash; catkin_make'
-RUN /bin/bash -c '. /opt/ros/noetic/setup.bash; catkin_make'
-
-# RUN export ROS_MASTER_URI=http://localhost:11311
-ENV ROS_MASTER_URI http://192.168.13.110:11311
-ENV ROS_IP 192.168.13.120
-
-# WORKDIR ${HOME}
-WORKDIR ${HOME}/catkin_ws/src/qolo_fast_modulation/scripts
-
-# COPY docker-rviz/qolo_env.sh ${HOME}/qolo_env.sh 
-# CMD tmux
-
-# Run the main controller (basic
-# CMD echo "python3.9 controller_laserscan.py"
+ENTRYPOINT tmux

@@ -7,8 +7,10 @@ docker run \
 	   -h $HOSTNAME \
 	   --net host \
 	   -v /tmp/.X11-unix:/tmp/.X11-unix \
-	   -v $HOME/.Xauthority:/home/ros/.Xauthority \
-	   -v "$(pwd)"/src/various_tools/vartools:/python/various_tools/vartools\
+	   -v $HOME/.Xauthority:/home/ros2/.Xauthority \
+	   -v "$(pwd)"/local/*:/python/*\
+	   -v "$(pwd)"/models/*:/home/ros2/models/*\
+	   # -v "$(pwd)"/src/various_tools/vartools:/python/various_tools/vartools\
 	   ros2_franka_avoidance_modulation
 
 # -v "$(pwd)"/src/various_tool:/python/fast_obstacle_avoidance/dynamic_obstacle_avoidance\
