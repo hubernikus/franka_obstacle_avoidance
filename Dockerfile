@@ -40,19 +40,21 @@ RUN python3 -m pip install --editable .
 # RUN chmod 600 ${HOME}/.ssh/id_rsa
 # RUN ssh-keyscan github.com >> ${HOME}/.ssh/known_hosts
 
-# Semester-Project-Learning [Ekin]
-WORKDIR ${HOME}/python
-# RUN git clone -b main --single-branch git@github.com:MerihEkin/epfl_semester_project_1.git
-# WORKDIR ${HOME}/python/epfl_semester_project_1
-# RUN python3 -m pip install -r requirements.txt
-# RUN cd epfl_semester_project_1 && sudo python3 -m pip install --editable .
-
 # Semester-Project-Avoiding [Thibaud]
 WORKDIR ${HOME}/python
 RUN git clone -b main --single-branch https://github.com/TicaGit/semester_project_LASA_trinca.git
 WORKDIR ${HOME}/python/semester_project_LASA_trinca
 # RUN python3 -m pip install -r requirements.txt
 # RUN python3 -m pip install --editable .
+
+# Semester-Project-Learning [Ekin]
+WORKDIR ${HOME}/python
+RUN --mount=type=ssh git clone -b main --single-branch git@github.com:MerihEkin/epfl_semester_project_1.git
+# RUN git clone -b main --single-branch git@github.com:MerihEkin/epfl_semester_project_1.git
+# WORKDIR ${HOME}/python/epfl_semester_project_1
+# RUN python3 -m pip install -r requirements.txt
+# RUN cd epfl_semester_project_1 && sudo python3 -m pip install --editable .
+
 
 # Files are copied indivually to allow compatibility
 # for combo and without docker container
