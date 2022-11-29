@@ -49,8 +49,10 @@ WORKDIR ${HOME}/python/semester_project_LASA_trinca
 
 # Semester-Project-Learning [Ekin]
 WORKDIR ${HOME}/python
+USER root
 RUN --mount=type=ssh git clone -b main --single-branch git@github.com:MerihEkin/epfl_semester_project_1.git
-# RUN git clone -b main --single-branch git@github.com:MerihEkin/epfl_semester_project_1.git
+RUN chown -R ${USER}:${USER} epfl_semester_project_1
+USER ${USER}
 # WORKDIR ${HOME}/python/epfl_semester_project_1
 # RUN python3 -m pip install -r requirements.txt
 # RUN cd epfl_semester_project_1 && sudo python3 -m pip install --editable .
@@ -62,6 +64,7 @@ RUN --mount=type=ssh git clone -b main --single-branch git@github.com:MerihEkin/
 RUN mkdir -p /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
 WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
 
+RUN echo "0" # Redo remaining command
 # Copy the local folder
 COPY --chown=${USER} src src
 COPY --chown=${USER} scripts scripts
@@ -72,6 +75,9 @@ COPY --chown=${USER} setup.py setup.py
 # COPY --chown=${USER} setup.cfg setup.cfg
 RUN python3 -m pip install -r requirements.txt
 RUN python3 -m pip install --editable .
+
+# Delete unnecessary files (somehow this doe now work ?!)
+RUN rm -f setup.py requirements.txt
 
 WORKDIR /home/${USER}/ros2_ws/
 RUN /bin/bash -c "source /opt/ros2/$ROS_DISTRO/setup.bash; colcon build --symlink-install"

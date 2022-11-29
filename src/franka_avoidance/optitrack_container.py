@@ -20,7 +20,7 @@ class OptitrackContainer(ObstacleContainer):
         if not hasattr(obstacle, "name"):
             raise ValueError("Topic name 'name' needed to recognize obstacle")
 
-        self.
-
+        pass
+    
     def callback(self):
         pass
