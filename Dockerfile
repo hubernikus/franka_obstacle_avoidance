@@ -49,13 +49,14 @@ WORKDIR ${HOME}/python/semester_project_LASA_trinca
 
 # Semester-Project-Learning [Ekin]
 WORKDIR ${HOME}/python
-USER root
-RUN --mount=type=ssh git clone -b main --single-branch git@github.com:MerihEkin/epfl_semester_project_1.git
-RUN chown -R ${USER}:${USER} epfl_semester_project_1
-USER ${USER}
+# USER root
+# RUN --mount=type=ssh git clone -b main --single-branch git@github.com:MerihEkin/epfl_semester_project_1.git
+# RUN chown -R ${USER}:${USER} epfl_semester_project_1
+# USER ${USER}
 # WORKDIR ${HOME}/python/epfl_semester_project_1
 # RUN python3 -m pip install -r requirements.txt
 # RUN cd epfl_semester_project_1 && sudo python3 -m pip install --editable .
+RUN git clone -b main --single-branch https://github.com/MerihEkin/epfl_semester_project_1
 
 
 # Files are copied indivually to allow compatibility
