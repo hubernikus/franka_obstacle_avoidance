@@ -28,11 +28,15 @@ class TwistController(Node):
         self.ds = create_cartesian_ds(DYNAMICAL_SYSTEM_TYPE.POINT_ATTRACTOR)
         self.ds.set_parameter_value(
             "gain", [50.0, 50.0, 50.0, 10.0, 10.0, 10.0], sr.ParameterType.DOUBLE_ARRAY
-            )
+        )
 
         self.ctrl = create_cartesian_controller(CONTROLLER_TYPE.COMPLIANT_TWIST)
-        self.ctrl.set_parameter_value("linear_principle_damping", 1.0, sr.ParameterType.DOUBLE)
-        self.ctrl.set_parameter_value("linear_orthogonal_damping", 1.0, sr.ParameterType.DOUBLE)
+        self.ctrl.set_parameter_value(
+            "linear_principle_damping", 1.0, sr.ParameterType.DOUBLE
+        )
+        self.ctrl.set_parameter_value(
+            "linear_orthogonal_damping", 1.0, sr.ParameterType.DOUBLE
+        )
         self.ctrl.set_parameter_value("angular_stiffness", 0.5, sr.ParameterType.DOUBLE)
         self.ctrl.set_parameter_value("angular_damping", 0.5, sr.ParameterType.DOUBLE)
 
@@ -51,7 +55,10 @@ class TwistController(Node):
                     state.ee_state.get_reference_frame(),
                 )
                 self.ds.set_parameter_value(
-                    "attractor", target, sr.ParameterType.STATE, sr.StateType.CARTESIAN_POSE
+                    "attractor",
+                    target,
+                    sr.ParameterType.STATE,
+                    sr.StateType.CARTESIAN_POSE,
                 )
                 target_set = True
             else:
@@ -62,12 +69,12 @@ class TwistController(Node):
                 )
                 self.command.joint_state = state.joint_state
                 self.command.joint_state.set_torques(self.command_torques.get_torques())
-                
+
                 self.robot.send_command(self.command)
 
             self.rate.sleep()
 
-            
+
 if __name__ == "__main__":
     rclpy.init()
     # rospy.init_node("test", anonymous=True)
@@ -76,12 +83,12 @@ if __name__ == "__main__":
     # Spin in a separate thread
     controller = TwistController(robot=robot_interface, freq=500)
 
-    thread = threading.Thread(target=rclpy.spin, args=(controller, ), daemon=True)
+    thread = threading.Thread(target=rclpy.spin, args=(controller,), daemon=True)
     thread.start()
 
     try:
         controller.run()
-        
+
     except KeyboardInterrupt:
         pass
 

@@ -21,7 +21,7 @@ class JointSpaceController(Node):
         super().__init__(node_name)
         self.robot = robot
         self.rate = self.create_rate(freq)
-        
+
         self.command = CommandMessage()
         self.command.control_type = [ControlType.VELOCITY.value]
 
@@ -70,12 +70,12 @@ if __name__ == "__main__":
     # Spin in a separate thread
     controller = JointSpaceController(robot=robot_interface, freq=500)
 
-    thread = threading.Thread(target=rclpy.spin, args=(controller, ), daemon=True)
+    thread = threading.Thread(target=rclpy.spin, args=(controller,), daemon=True)
     thread.start()
 
     try:
         controller.run()
-        
+
     except KeyboardInterrupt:
         pass
 
