@@ -10,10 +10,4 @@
 # DOCKER_BUILDKIT=1 docker build "${BUILD_FLAGS[@]}" . || exit 1
 # install ros package
 # DOCKER_BUILDKIT=1 docker build -t ros2_franka_avoidance --ssh default="$HOME/.ssh/id_ed25519" .
-
 docker build -t ros2_franka_avoidance .
-
-# TO run:
-# 
-# $ docker run -it --rm ros_with_rviz
-# 

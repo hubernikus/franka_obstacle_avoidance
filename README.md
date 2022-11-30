@@ -33,6 +33,10 @@ Run docker file:
 bash docker-run.sh
 ```
 
+### Windows user
+The setup for windows is unfortunately a bit more difficult; one option is to follow the descriptions here:
+https://dev.to/darksmile92/run-gui-app-in-linux-docker-container-on-windows-host-4kde
+
 ## Optitrack (Camera for Obstacle Recognition on Real Robot)
 The repository can be found under
 ``` bash

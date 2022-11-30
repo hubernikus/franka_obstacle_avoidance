@@ -40,15 +40,19 @@ RUN python3 -m pip install --editable .
 # RUN chmod 600 ${HOME}/.ssh/id_rsa
 # RUN ssh-keyscan github.com >> ${HOME}/.ssh/known_hosts
 
+RUN mkdir -p /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
+
 # Semester-Project-Avoiding [Thibaud]
-WORKDIR ${HOME}/python
-RUN git clone -b main --single-branch https://github.com/TicaGit/semester_project_LASA_trinca.git
-WORKDIR ${HOME}/python/semester_project_LASA_trinca
+WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance/
+RUN git clone -b main --single-branch https://github.com/TicaGit/semester_project_LASA_trinca.git project_thibaud
+WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance/project_thibaud
+RUN python3 -m pip install --editable .
 # RUN python3 -m pip install -r requirements.txt
-# RUN python3 -m pip install --editable .
 
 # Semester-Project-Learning [Ekin]
-WORKDIR ${HOME}/python
+WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance/
+RUN git clone -b main --single-branch https://github.com/MerihEkin/epfl_semester_project_1.git project_ekin
+
 # USER root
 # RUN --mount=type=ssh git clone -b main --single-branch git@github.com:MerihEkin/epfl_semester_project_1.git
 # RUN chown -R ${USER}:${USER} epfl_semester_project_1
@@ -56,16 +60,12 @@ WORKDIR ${HOME}/python
 # WORKDIR ${HOME}/python/epfl_semester_project_1
 # RUN python3 -m pip install -r requirements.txt
 # RUN cd epfl_semester_project_1 && sudo python3 -m pip install --editable .
-RUN git clone -b main --single-branch https://github.com/MerihEkin/epfl_semester_project_1
-
 
 # Files are copied indivually to allow compatibility
 # for combo and without docker container
 # This should be changed for production
-RUN mkdir -p /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
-WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
 
-RUN echo "0" # Redo remaining command
+WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
 # Copy the local folder
 COPY --chown=${USER} src src
 COPY --chown=${USER} scripts scripts
