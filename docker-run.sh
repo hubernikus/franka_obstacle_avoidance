@@ -8,13 +8,12 @@ docker run \
 	   --net host \
 	   -v /tmp/.X11-unix:/tmp/.X11-unix \
 	   -v $HOME/.Xauthority:/home/ros2/.Xauthority \
-	   -v "$(pwd)"/local/*:/home/ros2/python/* \
 	   -v "$(pwd)"/scripts:/home/ros2/ros2_ws/src/franka_obstacle_avoidance/scripts \
 	   -v "$(pwd)"/src:/home/ros2/ros2_ws/src/franka_obstacle_avoidance/src \
+	   -v "$(pwd)"/lib/dynamic_obstacle_avoidance/dynamic_obstacle_avoidance:/home/ros2/python/dynamic_obstacle_avoidance/dynamic_obstacle_avoidance \
 	   ros2_franka_avoidance
 
-
-
+# -v "$(pwd)"/local/*:/home/ros2/python/* \
 # -v "$(pwd)"/models/*:/home/ros2/models/*\
 # -v "$(pwd)"/src/various_tools/vartools:/python/various_tools/vartools\
 # -v "$(pwd)"/src/various_tool:/python/fast_obstacle_avoidance/dynamic_obstacle_avoidance\

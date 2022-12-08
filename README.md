@@ -70,3 +70,27 @@ Run docker file (obstacles are now detectable):
 ``` bash
 bash docker-run.sh
 ```
+
+# Control Libraries
+> New Controller Type: 
+	- DERIVED_DISSIPATIVE_LINEAR subclass of DISSIPATIVE
+	- We are 'override' the the 'compute_dissipative' function
+    - We need to update the source file (!)
+	- Set 'new parameter' before you 'compute_dissipative'
+	- 'controller->set_paramater_value<Eigen::MatrixXd>("damping", damping_value);
+	
+FORGET EVERYTHING
+Use impedenance:
+   - set inertia and stiffness to zero
+   - and just update damping
+   - Command state get acceleration:
+   
+   - Desired Force & Desired 
+   - command_state.set_linear_acceleration()
+   - command_state.set_orientation()
+Check out:
+   - https://github.com/epfl-lasa/control-libraries/blob/main/python/test/controllers/test_impedance.py
+
+
+
+

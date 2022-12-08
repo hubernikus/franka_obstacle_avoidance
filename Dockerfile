@@ -53,6 +53,11 @@ RUN python3 -m pip install --editable .
 WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance/
 RUN git clone -b main --single-branch https://github.com/MerihEkin/epfl_semester_project_1.git project_ekin
 
+# Install final
+USER root
+RUN python3 -m pip install pybullet
+USER ${USER}
+
 # USER root
 # RUN --mount=type=ssh git clone -b main --single-branch git@github.com:MerihEkin/epfl_semester_project_1.git
 # RUN chown -R ${USER}:${USER} epfl_semester_project_1

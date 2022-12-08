@@ -31,6 +31,8 @@ class TwistController(Node):
         )
 
         self.ctrl = create_cartesian_controller(CONTROLLER_TYPE.COMPLIANT_TWIST)
+        # self.ctrl = create_cartesian_controller(CONTROLLER_TYPE.IMPEDANCE)
+
         self.ctrl.set_parameter_value(
             "linear_principle_damping", 1.0, sr.ParameterType.DOUBLE
         )
