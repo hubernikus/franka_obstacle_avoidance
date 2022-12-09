@@ -15,6 +15,13 @@ Run simulator
 python3 pybullet_zmq/bin/zmq-simulator
 ```
 
+This docker uses tmux (terminal multiplexer), which allows to run several terminals in one window (https://github.com/tmux/tmux/wiki).
+
+Following commands will come in handy:  
+- [CTRL+b "] Split Window Horizontally
+- [CTRL+b o] Go to next window
+
+
 ### Run the simulator
 Build docker file:
 ``` bash
