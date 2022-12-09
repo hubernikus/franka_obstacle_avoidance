@@ -114,5 +114,9 @@ RUN rm -rd lib
 # # Clean image
 # RUN sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*
 
-# WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
-ENTRYPOINT tmux
+WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
+# ENTRYPOINT tmux
+ENTRYPOINT tmux new "python3 ~/pybullet_zmq/bin/zmq-simulator" ';' split "bash"
+
+
+

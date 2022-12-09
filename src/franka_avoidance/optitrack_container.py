@@ -12,6 +12,7 @@ from dynamic_obstacle_avoidance.obstacles import EllipseWithAxes as Ellipse
 from dynamic_obstacle_avoidance.containers import ObstacleContainer
 
 from franka_avoidance.optitrack_interface import OptitrackInterface
+from franka_avoidance.pybullet_handler import PybulletHandler
 
 
 class RvizHandler:
@@ -47,7 +48,7 @@ class OptitrackContainer(ObstacleContainer):
             self.optitrack_reciever = OptitrackInterface()
         self.visualization_handler = visualization_handler
 
-    def publish_obstacles(self):
+    def update_obstacles(self):
         """Update positions based on optitrack."""
         self.visualization_handler.update(self)
 
@@ -67,7 +68,7 @@ if (__name__) == "__main__":
     obstacles = OptitrackContainer(use_optitrack=False)
     obstacles.append(
         Ellipse(
-            center_position=np.zeros([0, 0, 0]),
+            center_position=np.array([1, 0, 1]),
             axes_length=np.array([1, 1, 1])
             # orientation
             # name="",
@@ -76,4 +77,9 @@ if (__name__) == "__main__":
     )
 
     obstacles.visualization_handler = PybulletHandler(obstacles)
-    obstacles.publish_obstacles()
+
+    import time
+
+    for ii in range(100):
+        obstacles.update_obstacles()
+        time.sleep(0.2)

@@ -12,14 +12,17 @@ class PybulletHandler:
 
         self.connection_mode = None
         if self.connection_mode is None:
-            self._client = pybullet.connect(pybullet.SHARED_MEMORY)
-            breakpoint()
-            if self._client >= 0:
-                return
-            else:
-                self.connection_mode = pybullet.DIRECT
+            self._client = pb.connect(pb.SHARED_MEMORY)
+            if self._client <= 0:
+                # return
+                # else:
+                print("Doing new connection.")
+                self.connection_mode = pb.DIRECT
 
-        self._client = pybullet.connect(self.connection_mode)
+                self._client = pb.connect(self.connection_mode)
+
+        pb.configureDebugVisualizer(pb.COV_ENABLE_GUI, 0)
+        pb.configureDebugVisualizer(lightPosition=[-10, 0, 100])
 
         self.pb_obstacle_ids = []
         # Goal Sphere
@@ -44,6 +47,7 @@ class PybulletHandler:
                 baseMass=0,
                 baseInertialFramePosition=[0, 0, 0],
                 baseVisualShapeIndex=self.pb_obstacle_ids[oo],
+                basePosition=obs.position,
                 # basePosition=obstacle.position,
                 useMaximalCoordinates=True,
             )
@@ -51,5 +55,7 @@ class PybulletHandler:
     def update(self, obstacles: list[Obstacle]) -> None:
         for oo, obs in enumerate(obstacles):
             pb.resetBasePositionAndOrientation(
-                self.pb_obstacle_ids[oo], obs.position, obs.orientation.as_quat()
+                self.pb_obstacle_ids[oo],
+                obs.position,
+                obs.orientation.as_quat().flatten(),
             )
