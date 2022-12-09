@@ -2,13 +2,8 @@
 Container which smoothenes position (and rotation) of incoming obstacles.
 """
 import warnings
-from enum import Enum, auto
 
-
-try:
-    import pybullet as pb
-except ModuleNotFoundError:
-    warnings.warn("PyBullet not imported - no publishing possible.")
+# from enum import Enum, auto
 
 import numpy as np
 
@@ -17,44 +12,6 @@ from dynamic_obstacle_avoidance.obstacles import EllipseWithAxes as Ellipse
 from dynamic_obstacle_avoidance.containers import ObstacleContainer
 
 from franka_avoidance.optitrack_interface import OptitrackInterface
-
-
-class PybulletHandler:
-    def __init__(self, obstacles) -> None:
-        physicsClient = pb.connect(pb.DIRECT)  # p.DIRECT for non-graphical version
-
-        self.pb_obstacle_ids = []
-        # Goal Sphere
-        for oo, obs in enumerate(obstacles):
-            if isinstance(obs, Ellipse):
-                # pb_obstacle_type = pb.GEOM_ELLIPSOID
-                pb_obstacle_type = pb.GEOM_SPHERE
-
-                self.pb_obstacle_ids.append(
-                    pb.createVisualShape(
-                        shapeType=pb_obstacle_type,
-                        # halfExtents=obs.axes_length / 2.0,
-                        radius=1.0,
-                        rgbaColor=[0.1, 0.9, 0.1, 0.9],
-                        specularColor=[0.4, 0.4, 0],
-                    )
-                )
-            else:
-                raise NotImplementedError("Given obstacle type has not been defined.")
-
-            pb_obstacle = pb.createMultiBody(
-                baseMass=0,
-                baseInertialFramePosition=[0, 0, 0],
-                baseVisualShapeIndex=self.pb_obstacle_ids[oo],
-                # basePosition=obstacle.position,
-                useMaximalCoordinates=True,
-            )
-
-    def update(self, obstacles: list[Obstacle]) -> None:
-        for oo, obs in enumerate(obstacles):
-            pb.resetBasePositionAndOrientation(
-                self.pb_obstacle_ids[oo], obs.position, obs.orientation.as_quat()
-            )
 
 
 class RvizHandler:

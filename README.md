@@ -10,6 +10,11 @@ cd simulator-backend/pybullet_zmq
 bash docker-build.sh
 ```
 
+Run simulator
+``` bash
+python3 pybullet_zmq/bin/zmq-simulator
+```
+
 ### Run the simulator
 Build docker file:
 ``` bash
