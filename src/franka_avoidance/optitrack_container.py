@@ -13,21 +13,15 @@ from dynamic_obstacle_avoidance.containers import ObstacleContainer
 
 from franka_avoidance.optitrack_interface import OptitrackInterface
 from franka_avoidance.pybullet_handler import PybulletHandler
-
-
-class RvizHandler:
-    def __init__(self, obstacles: ObstacleContainer):
-        pass
-
-    def update(self, obstacles: ObstacleContainer):
-        pass
+from franka_avoidance.rviz_handler import PybulletHandler
 
 
 # class VisualizationHandler(Protocol):
-#     def __init__(self, obstacles: ObstacleContainer):
+#     """ Visualization handler allows to """
+#     def __init__(self, obstacles: list[Obstacle]) -> None:
 #         ...
 
-#     def update(self, obstacles: ObstacleContainer):
+#     def update(self, obstacles: list[Obstacle]) -> None:
 #         ...
 
 # class VisualizationMode(Enum):
@@ -41,6 +35,8 @@ class OptitrackContainer(ObstacleContainer):
         super().__init__()
         obstacle_ids = []
         obstacle_offsets = []
+
+        ekf_orientation = EKF()
 
         # Setup full optitrack callback
         self.use_optitrack = use_optitrack

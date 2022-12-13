@@ -70,22 +70,12 @@ class PybulletHandler:
                 basePosition=[100, 0, 0],
                 physicsClientId=self._client,
             )
-        # breakpoint()
-        # pass
 
-    def __init__(self, obstacles) -> None:
-        # physicsClient = pb.connect(pb.DIRECT)  # p.DIRECT for non-graphical version
-        # self._pb = None
-        # self.zmq_handler = ZmqHandler()
-
+    def __init__(self, obstacles, obstacle_ids: list = None) -> None:
         self.connection_mode = None
         if self.connection_mode is None:
-            # self._client = pb.connect(pb.GUI)
             self._client = pb.connect(pb.SHARED_MEMORY)
             if self._client < 0:
-                # return
-                # else:
-                breakpoint()
                 print("[INFO] Doing new connection.")
                 self.connection_mode = pb.DIRECT
 
@@ -94,22 +84,13 @@ class PybulletHandler:
                 print("[INFO] Succesfully connected to existing pybullet simulation.")
 
         pb.setAdditionalSearchPath(pybullet_data.getDataPath())
-        # pb.configureDebugVisualizer(pb.COV_ENABLE_GUI, 0)
-        # pb.configureDebugVisualizer(lightPosition=[-10, 0, 100])
-
-        # self._client = 1
-
-        # breakpoint()
-        # self.error_patch()
 
         self.pb_visual_ids = []
         self.pb_body_ids = []
 
         for oo, obs in enumerate(obstacles):
             if isinstance(obs, Ellipse):
-                # pb_obstacle_type = pb.GEOM_ELLIPSOID
                 pb_obstacle_type = pb.GEOM_SPHERE
-                # pb_obstacle_type = pb.GEOM_BOX
 
                 if obs.axes_length[0] != obs.axes_length[1] != obs.axes_length[2]:
                     warnings.warn("Ellipse is not a sphere. We take the longest axes.")
@@ -128,7 +109,7 @@ class PybulletHandler:
                 )
 
             elif isinstance(obs, Cuboid):
-                raise NotImplementedError("TODO")
+                raise NotImplementedError("TODO: implement cuboids (check for 3D use).")
             else:
                 raise NotImplementedError("Given obstacle type has not been defined.")
 
@@ -144,7 +125,7 @@ class PybulletHandler:
                 )
             )
 
-    def update(self, obstacles: list[Obstacle]) -> None:
+    def update(self, obstacles: list[Obstacle], obstacle_ids: list = None) -> None:
         for oo, obs in enumerate(obstacles):
             pb.resetBasePositionAndOrientation(
                 self.pb_body_ids[oo],
