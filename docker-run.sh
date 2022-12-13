@@ -12,6 +12,7 @@ docker run \
 	   -v "$(pwd)"/src:/home/ros2/ros2_ws/src/franka_obstacle_avoidance/src \
 	   -v $HOME/Code/dynamic_obstacle_avoidance/dynamic_obstacle_avoidance:/home/ros2/python/dynamic_obstacle_avoidance/dynamic_obstacle_avoidance \
 	   -v $HOME/Code/various_tools/vartools:/home/ros2/python/various_tools/vartools \
+	   -v $HOME/Code/franka/simulator-backend/pybullet_simulation/pybullet_simulation:/home/ros2/pybullet_simulation/pybullet_simulation \
 	   ros2_franka_avoidance
 
 # -v "$(pwd)"/local/*:/home/ros2/python/* \

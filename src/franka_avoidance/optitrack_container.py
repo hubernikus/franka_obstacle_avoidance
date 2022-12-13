@@ -63,13 +63,16 @@ class OptitrackContainer(ObstacleContainer):
     def callback(self):
         pass
 
+    def shutdown(self):
+        self.visualization_handler.remove_all_obstacles()
+
 
 if (__name__) == "__main__":
     obstacles = OptitrackContainer(use_optitrack=False)
     obstacles.append(
         Ellipse(
-            center_position=np.array([1, 0, 1]),
-            axes_length=np.array([1, 1, 1])
+            center_position=np.array([0.3, 2, 0]),
+            axes_length=np.array([0.3, 0.3, 0.3])
             # orientation
             # name="",
         ),
@@ -80,6 +83,11 @@ if (__name__) == "__main__":
 
     import time
 
-    for ii in range(100):
-        obstacles.update_obstacles()
-        time.sleep(0.2)
+    try:
+        for ii in range(100):
+            obstacles.update_obstacles()
+            time.sleep(0.2)
+    except:
+        pass
+
+    obstacles.shutdown()
