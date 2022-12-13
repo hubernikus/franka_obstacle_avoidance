@@ -96,7 +96,7 @@ RUN git clone -b v0.1.0 --single-branch https://github.com/aica-technology/frank
 WORKDIR /home/${USER}/ros2_ws/src
 RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash; colcon build --symlink-install"
 
-RUN echo "1"
+RUN echo "2"
 # Pybullet Setup
 WORKDIR ${HOME}
 RUN mkdir lib
