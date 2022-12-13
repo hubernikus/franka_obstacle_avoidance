@@ -21,8 +21,8 @@ class PybulletHandler:
 
                 self._client = pb.connect(self.connection_mode)
 
-        pb.configureDebugVisualizer(pb.COV_ENABLE_GUI, 0)
-        pb.configureDebugVisualizer(lightPosition=[-10, 0, 100])
+        # pb.configureDebugVisualizer(pb.COV_ENABLE_GUI, 0)
+        # pb.configureDebugVisualizer(lightPosition=[-10, 0, 100])
 
         self.pb_obstacle_ids = []
         # Goal Sphere
@@ -51,6 +51,8 @@ class PybulletHandler:
                 # basePosition=obstacle.position,
                 useMaximalCoordinates=True,
             )
+            breakpoint()
+        self.update()
 
     def update(self, obstacles: list[Obstacle]) -> None:
         for oo, obs in enumerate(obstacles):
