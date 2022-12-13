@@ -14,6 +14,7 @@ docker run \
 	   -v $HOME/Code/various_tools/vartools:/home/ros2/python/various_tools/vartools \
 	   ros2_franka_avoidance
 
+# -v $HOME/Code/franka/simulator-backend/pybullet_simulation/pybullet_simulation:/home/ros2/pybullet_simulation/pybullet_simulation \
 # -v "$(pwd)"/local/*:/home/ros2/python/* \
 # -v "$(pwd)"/models/*:/home/ros2/models/*\
 # -v "$(pwd)"/src/various_tools/vartools:/python/various_tools/vartools\

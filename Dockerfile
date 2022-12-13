@@ -18,7 +18,6 @@ RUN git clone -b v1.1.0 --depth 1 https://github.com/aica-technology/network-int
     cd network-interfaces && sudo bash install.sh --auto --no-cpp
 RUN sudo rm -rf /tmp/network-interfaces
 
-# RUN mkdir -p ${HOME}/lib
 RUN mkdir ${HOME}/python
 
 # Dynamic Obstacle Avoidance Library [Only minor changes]
@@ -52,24 +51,10 @@ RUN python3 -m pip install --editable .
 # Semester-Project-Learning [Ekin]
 WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance/
 RUN git clone -b main --single-branch https://github.com/MerihEkin/epfl_semester_project_1.git project_ekin
+WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance/project_ekin
+RUN python3 -m pip install --editable .
 
-# # Install final
-# USER root
-# RUN python3 -m pip install pybullet
-# USER ${USER}
-
-# USER root
-# RUN --mount=type=ssh git clone -b main --single-branch git@github.com:MerihEkin/epfl_semester_project_1.git
-# RUN chown -R ${USER}:${USER} epfl_semester_project_1
-# USER ${USER}
-# WORKDIR ${HOME}/python/epfl_semester_project_1
-# RUN python3 -m pip install -r requirements.txt
-# RUN cd epfl_semester_project_1 && sudo python3 -m pip install --editable .
-
-# Files are copied indivually to allow compatibility
-# for combo and without docker container
-# This should be changed for production
-
+# Install final libraries
 RUN sudo pip3 install pybullet
 RUN sudo ldconfig
 
@@ -96,7 +81,6 @@ RUN git clone -b v0.1.0 --single-branch https://github.com/aica-technology/frank
 WORKDIR /home/${USER}/ros2_ws/src
 RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash; colcon build --symlink-install"
 
-RUN echo "1"
 # Pybullet Setup
 WORKDIR ${HOME}
 RUN mkdir lib
@@ -117,6 +101,7 @@ RUN rm -rd lib
 WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
 # ENTRYPOINT tmux
 ENTRYPOINT tmux new "python3 ~/pybullet_zmq/bin/zmq-simulator" ';' split "bash"
+
 
 
 
