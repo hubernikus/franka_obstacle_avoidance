@@ -127,8 +127,6 @@ class PybulletHandler:
                     physicsClientId=self._client,
                 )
             )
-            breakpoint()
-        self.update()
 
     def update(self, obstacles: list[Obstacle], obstacle_ids: list = None) -> None:
         for oo, obs in enumerate(obstacles):

@@ -13,7 +13,7 @@ from dynamic_obstacle_avoidance.containers import ObstacleContainer
 
 from franka_avoidance.optitrack_interface import OptitrackInterface
 from franka_avoidance.pybullet_handler import PybulletHandler
-from franka_avoidance.rviz_handler import PybulletHandler
+from franka_avoidance.rviz_handler import RvizHandler
 
 
 # class VisualizationHandler(Protocol):
@@ -36,8 +36,6 @@ class OptitrackContainer(ObstacleContainer):
         obstacle_ids = []
         obstacle_offsets = []
 
-        ekf_orientation = EKF()
-
         # Setup full optitrack callback
         self.use_optitrack = use_optitrack
         if use_optitrack:
@@ -46,7 +44,8 @@ class OptitrackContainer(ObstacleContainer):
 
     def update_obstacles(self):
         """Update positions based on optitrack."""
-        self.visualization_handler.update(self)
+        obstacle_ids = np.arange(len(self))
+        self.visualization_handler.update(self, obstacle_ids)
 
     def append(
         self,
@@ -75,15 +74,16 @@ if (__name__) == "__main__":
         obstacle_id=0,
     )
 
-    obstacles.visualization_handler = PybulletHandler(obstacles)
+    # obstacles.visualization_handler = PybulletHandler(obstacles)
+    obstacles.visualization_handler = RvizHandler()
 
     import time
 
-    try:
-        for ii in range(100):
-            obstacles.update_obstacles()
-            time.sleep(0.2)
-    except:
-        pass
+    # try:
+    for ii in range(100):
+        obstacles.update_obstacles()
+        time.sleep(0.2)
+    # except:
+    #     pass
 
     obstacles.shutdown()
