@@ -29,7 +29,8 @@ class OrientationFilter:
 
     def __init__(self, update_frequency: float = 100.0):
         # Measure Quaternion - Estimate Quaternion and Position
-        self._kf = KalmanFilter(dim_x=7, dim_z=4)
+        # self._kf = KalmanFilter(dim_x=7, dim_z=4)
+        self._kf = KalmanFilter(dim_x=7, dim_z=7)
 
         self.dim_quat = 4
         self.dim_vel = 3
@@ -42,26 +43,28 @@ class OrientationFilter:
         self._kf.F = np.eye(self._kf.dim_x)
 
         # Measurement function (measures position only)
-        self._kf.H = np.vstack((np.eye(4), np.zeros((3, 4))))
+        # self._kf.H = np.vstack((np.eye(4), np.zeros((3, 4))))
+        self._kf.F = np.eye(self._kf.dim_x)
 
         # Covariance matrix
         self._kf.P = np.eye(self._kf.dim_x)
 
         # Measurement noise
-        self._kf.R = np.eye(4) * 0.01
+        self._kf.R = np.eye(self._kf.dim_x) * 0.01
 
         # Process noise
-        self._kf.Q = Q_discrete_white_noise(dim=self.dim_quat, dt=self.dt, var=0.01)
+        self._kf.Q = Q_discrete_white_noise(dim=self.dim_x, dt=self.dt, var=0.01)
 
     def compute_once(self, quaternion_measurement: np.ndarray):
         velocity_estimate = get_angular_velocity_from_quaterions(
             self.orientation,
             Rotation.from_quat(quaternion_measurement),
+            self.dt,
         )
 
         self.update_state_transition()
         self._kf.predict()
-        self._kf.update(quaternion_measurement)
+        self._kf.update(np.hstack((quaternion_measurement, velocity_estimate)))
 
     def update_state_transition(self):
         self._kf.F = np.eye(self.dim_x)
@@ -106,7 +109,8 @@ class PositionFilter:
         self.dimension = 3
 
         # Measure Position - Estimate Velocity
-        self._kf = KalmanFilter(dim_x=self.dimension * 2, dim_z=self.dimension)
+        # self._kf = KalmanFilter(dim_x=self.dimension * 2, dim_z=self.dimension)
+        self._kf = KalmanFilter(dim_x=self.dimension * 2, dim_z=self.dimension * 2)
 
         self.dt = 1.0 / update_frequency
 
@@ -117,22 +121,24 @@ class PositionFilter:
         self._kf.F[:, : self.dimension][:, self.dimension :] = np.eye(self.dimension)
 
         # Measurement function (measures position only)
-        self._kf.H = np.hstack((np.eye(self.dimension), np.zeros(self.dimension)))
+        # self._kf.H = np.hstack((np.eye(self.dimension), np.zeros(self.dimension)))
+        self._kf.H = np.eye(self._kf.dim_x)
 
         # Covariance matrix
         self._kf.P = np.eye(self._kf.dim_x)
 
         # Measurement noise
-        self._kf.R = np.eye(self.dimension) * 0.01
+        self._kf.R = np.eye(self._kf.dim_x) * 0.01
 
         # Process noise
-        self._kf.Q = Q_discrete_white_noise(dim=self.dimension, dt=self.dt, var=0.01)
+        # self._kf.Q = Q_discrete_white_noise(dim=self.dimension, dt=self.dt, var=0.01)
+        self._kf.Q = Q_discrete_white_noise(dim=self._kf.dim_x, dt=self.dt, var=0.01)
 
     def run_once(self, position_measurement: np.ndarray) -> None:
         velocity_estimate = (position_measurement - self.position) / self.dt
 
         self._kf.predict()
-        self._kf.update(position_measurement)
+        self._kf.update(np.hstack((position_measurement, velocity_estimate)))
 
     def reset_position(self, value: np.ndarray):
         self._kf.x[: self.dimension] = value
