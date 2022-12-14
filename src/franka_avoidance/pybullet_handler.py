@@ -97,6 +97,7 @@ class PybulletHandler:
 
                 if obs.axes_length[0] != obs.axes_length[1] != obs.axes_length[2]:
                     warnings.warn("Ellipse is not a sphere. We take the longest axes.")
+
                 radius = np.max(obs.axes_length)
 
                 self.pb_visual_ids.append(
@@ -142,7 +143,3 @@ class PybulletHandler:
         for obs_id in self.pb_body_ids:
             print(f"[INFO] Removing body #{obs_id}")
             pb.removeBody(obs_id, physicsClientId=self._client)
-
-
-def basic_test():
-    pass

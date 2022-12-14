@@ -16,22 +16,20 @@ from franka_avoidance.pybullet_handler import PybulletHandler
 from franka_avoidance.rviz_handler import RvizHandler
 
 
-# class VisualizationHandler(Protocol):
-#     """ Visualization handler allows to """
-#     def __init__(self, obstacles: list[Obstacle]) -> None:
-#         ...
+class VisualizationHandler(Protocol):
+    """Visualization handler which allows updating / publishing the with corresponding
+    visualization tool."""
 
-#     def update(self, obstacles: list[Obstacle]) -> None:
-#         ...
-
-# class VisualizationMode(Enum):
-#     RVIZ = auto()
-#     PYBULLET = auto()
-#     NONE = auto()
+    def update(self, obstacles: list[Obstacle], obstacle_ids: list[int]) -> None:
+        ...
 
 
 class OptitrackContainer(ObstacleContainer):
-    def __init__(self, visualization_handler=None, use_optitrack: bool = True):
+    def __init__(
+        self,
+        visualization_handler: Optional(VisualizationHandler) = None,
+        use_optitrack: bool = True,
+    ):
         super().__init__()
         obstacle_ids = []
         obstacle_offsets = []
@@ -44,6 +42,9 @@ class OptitrackContainer(ObstacleContainer):
 
     def update_obstacles(self):
         """Update positions based on optitrack."""
+        if visualization_handler is None:
+            return
+
         obstacle_ids = np.arange(len(self))
         self.visualization_handler.update(self, obstacle_ids)
 
@@ -60,30 +61,3 @@ class OptitrackContainer(ObstacleContainer):
 
     def shutdown(self):
         self.visualization_handler.remove_all_obstacles()
-
-
-if (__name__) == "__main__":
-    obstacles = OptitrackContainer(use_optitrack=False)
-    obstacles.append(
-        Ellipse(
-            center_position=np.array([0.3, 2, 0]),
-            axes_length=np.array([0.3, 0.3, 0.3])
-            # orientation
-            # name="",
-        ),
-        obstacle_id=0,
-    )
-
-    # obstacles.visualization_handler = PybulletHandler(obstacles)
-    obstacles.visualization_handler = RvizHandler()
-
-    import time
-
-    # try:
-    for ii in range(100):
-        obstacles.update_obstacles()
-        time.sleep(0.2)
-    # except:
-    #     pass
-
-    obstacles.shutdown()
