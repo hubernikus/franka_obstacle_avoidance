@@ -4,10 +4,24 @@ Container which smoothenes position (and rotation) of incoming obstacles.
 import warnings
 
 import numpy as np
+from numpy import linalg as LA
 from scipy.spatial.transform import Rotation
 
 from filterpy.common import Q_discrete_white_noise
 from filterpy.kalman import KalmanFilter
+
+
+def get_angular_velocity_from_quaterions(
+    q1: Rotation, q2: Rotation, dt: float
+) -> np.ndarray:
+    """Returns the angular velocity required to reach quaternion 'q2'
+    from quaternion 'q1' within the timestep 'dt'."""
+    delta_q = q2.apply(q1.inv)
+    delta_q = delta_q / LA.norm(delta_q)
+
+    delta_q_norm = LA.norm(delta_q[1:])
+    delta_q_angle = 2 * np.arctan2(delta_q_norm, delta_q[0])
+    return delta_q[1:] * (delta_q_angle / dt)
 
 
 class OrientationFilter:
@@ -40,6 +54,11 @@ class OrientationFilter:
         self._kf.Q = Q_discrete_white_noise(dim=self.dim_quat, dt=self.dt, var=0.01)
 
     def compute_once(self, quaternion_measurement: np.ndarray):
+        velocity_estimate = get_angular_velocity_from_quaterions(
+            self.orientation,
+            Rotation.from_quat(quaternion_measurement),
+        )
+
         self.update_state_transition()
         self._kf.predict()
         self._kf.update(quaternion_measurement)
@@ -110,6 +129,8 @@ class PositionFilter:
         self._kf.Q = Q_discrete_white_noise(dim=self.dimension, dt=self.dt, var=0.01)
 
     def run_once(self, position_measurement: np.ndarray) -> None:
+        velocity_estimate = (position_measurement - self.position) / self.dt
+
         self._kf.predict()
         self._kf.update(position_measurement)
 
