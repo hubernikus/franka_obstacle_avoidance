@@ -3,6 +3,8 @@ Container which smoothenes position (and rotation) of incoming obstacles.
 """
 import warnings
 
+from typing import Protocol, Optional
+
 # from enum import Enum, auto
 
 import numpy as np
@@ -27,7 +29,7 @@ class VisualizationHandler(Protocol):
 class OptitrackContainer(ObstacleContainer):
     def __init__(
         self,
-        visualization_handler: Optional(VisualizationHandler) = None,
+        visualization_handler: Optional[VisualizationHandler] = None,
         use_optitrack: bool = True,
     ):
         super().__init__()
@@ -42,7 +44,7 @@ class OptitrackContainer(ObstacleContainer):
 
     def update_obstacles(self):
         """Update positions based on optitrack."""
-        if visualization_handler is None:
+        if self.visualization_handler is None:
             return
 
         obstacle_ids = np.arange(len(self))

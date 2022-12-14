@@ -3,6 +3,8 @@ Run and publish to pybullet together with robot.
 """
 import time
 
+import numpy as np
+
 from dynamic_obstacle_avoidance.obstacles import Obstacle
 from dynamic_obstacle_avoidance.obstacles import EllipseWithAxes as Ellipse
 
@@ -21,12 +23,12 @@ def main():
 
     obstacles.visualization_handler = PybulletHandler(obstacles)
 
-    # try:
-    for ii in range(100):
-        obstacles.update_obstacles()
-        time.sleep(0.2)
-    # except:
-    #     pass
+    try:
+        for ii in range(100):
+            obstacles.update_obstacles()
+            time.sleep(0.2)
+    except:
+        pass
 
     obstacles.shutdown()
 
