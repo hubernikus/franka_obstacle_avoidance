@@ -18,6 +18,11 @@ RUN git clone -b v1.1.0 --depth 1 https://github.com/aica-technology/network-int
     cd network-interfaces && sudo bash install.sh --auto --no-cpp
 RUN sudo rm -rf /tmp/network-interfaces
 
+# Install pybullet and other libraries
+RUN sudo pip3 install pybullet
+RUN sudo ldconfig
+
+# Install needed (local) python packages
 RUN mkdir ${HOME}/python
 
 # Dynamic Obstacle Avoidance Library [Only minor changes]
@@ -53,10 +58,6 @@ WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance/
 RUN git clone -b main --single-branch https://github.com/MerihEkin/epfl_semester_project_1.git project_ekin
 WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance/project_ekin
 RUN python3 -m pip install --editable .
-
-# Install final libraries
-RUN sudo pip3 install pybullet
-RUN sudo ldconfig
 
 WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
 # Copy the local folder

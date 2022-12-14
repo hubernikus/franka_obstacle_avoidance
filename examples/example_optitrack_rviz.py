@@ -1,13 +1,12 @@
 """
 Run and publish to pybullet together with robot.
-
 To run the script, first launch the pybullet-simulation:
 
 docker-terminal 1:
-python3 ~/pybullet_zmq/bin/zmq-simulator
+rviz
 
 docker-terminal 2:
-python example_pybullet_obstacles.py
+python example_optitrack_rviz.py
 """
 import time
 
@@ -17,7 +16,7 @@ from dynamic_obstacle_avoidance.obstacles import Obstacle
 from dynamic_obstacle_avoidance.obstacles import EllipseWithAxes as Ellipse
 
 from franka_avoidance.optitrack_container import OptitrackContainer
-from franka_avoidance.pybullet_handler import PybulletHandler
+from franka_avoidance.rviz_handler import RvizHandler
 
 
 def main():
@@ -29,7 +28,7 @@ def main():
         obstacle_id=0,
     )
 
-    obstacles.visualization_handler = PybulletHandler(obstacles)
+    obstacles.visualization_handler = RvizHandler(obstacles)
 
     try:
         for ii in range(100):

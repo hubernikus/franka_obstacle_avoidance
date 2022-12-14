@@ -241,3 +241,21 @@ class UnfinishedFilter:
     @property
     def angular_acceleration(self) -> np.ndarray:
         return self.x[16:19]
+
+
+def test_position_filter():
+    position_measurements = [
+        [0, 1, 0],
+        [0.1, 1.1, -0.1],
+        [0.2, 1.2, -0.2],
+        [0.3, 1.3, -0.3],
+        [0.4, 1.4, -0.4],
+        [0.6, 1.4, -0.4],
+    ]
+
+    for ii, pos in enumerate(position_measurement):
+        pass
+
+
+if (__name__) == "__main__":
+    main()
