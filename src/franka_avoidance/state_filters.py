@@ -52,8 +52,11 @@ class OrientationFilter:
         # Measurement noise
         self._kf.R = np.eye(self._kf.dim_x) * 0.01
 
-        # Process noise
-        self._kf.Q = Q_discrete_white_noise(dim=self.dim_x, dt=self.dt, var=0.01)
+        # Process noise [it is cut to fit 4 quaternions - 3 rotation-matrix]
+        Q = Q_discrete_white_noise(
+            dim=2, dt=self.dt, var=0.01, block_size=4, order_by_dim=False
+        )
+        self._kf.Q = Q[: self._kf.dim_x, : self._kf.dim_x]
 
     def compute_once(self, quaternion_measurement: np.ndarray):
         velocity_estimate = get_angular_velocity_from_quaterions(
@@ -118,7 +121,9 @@ class PositionFilter:
 
         # State transition matrix
         self._kf.F = np.eye(self._kf.dim_x)
-        self._kf.F[:, : self.dimension][:, self.dimension :] = np.eye(self.dimension)
+        self._kf.F[: self.dimension, self.dimension :] = (
+            np.eye(self.dimension) * self.dt
+        )
 
         # Measurement function (measures position only)
         # self._kf.H = np.hstack((np.eye(self.dimension), np.zeros(self.dimension)))
@@ -131,8 +136,9 @@ class PositionFilter:
         self._kf.R = np.eye(self._kf.dim_x) * 0.01
 
         # Process noise
-        # self._kf.Q = Q_discrete_white_noise(dim=self.dimension, dt=self.dt, var=0.01)
-        self._kf.Q = Q_discrete_white_noise(dim=self._kf.dim_x, dt=self.dt, var=0.01)
+        self._kf.Q = Q_discrete_white_noise(
+            dim=2, dt=self.dt, var=0.01, block_size=3, order_by_dim=False
+        )
 
     def run_once(self, position_measurement: np.ndarray) -> None:
         velocity_estimate = (position_measurement - self.position) / self.dt
@@ -243,19 +249,78 @@ class UnfinishedFilter:
         return self.x[16:19]
 
 
-def test_position_filter():
-    position_measurements = [
-        [0, 1, 0],
-        [0.1, 1.1, -0.1],
-        [0.2, 1.2, -0.2],
-        [0.3, 1.3, -0.3],
-        [0.4, 1.4, -0.4],
-        [0.6, 1.4, -0.4],
-    ]
+def test_position_filter(debug_print=False):
+    n_measurements = 21
+    pos_x = np.linspace(0, 2, n_measurements)
+    pos_y = np.linspace(1, 3, n_measurements)
+    pos_z = np.linspace(0, -2, n_measurements)
 
-    for ii, pos in enumerate(position_measurement):
-        pass
+    position_measurements = np.vstack((pos_x, pos_y, pos_z))
+
+    vel_estimated = [1, 1, -1]
+
+    pos_filter = PositionFilter(update_frequency=10.0)
+    pos_filter.reset_position(np.array(position_measurements[:, 0]))
+
+    pos_filter.run_once(position_measurements[:, 0])
+
+    # Directly after standstill, velocity is estimated to be at 0
+    assert not np.allclose(vel_estimated, pos_filter.velocity, atol=1e-2)
+
+    if debug_print:
+        print("measurement", position_measurements[:, 0])
+        print("position", np.round(pos_filter.position, 5))
+        print("velocity", np.round(pos_filter.velocity, 5))
+
+    for ii in range(1, position_measurements.shape[1]):
+        pos_filter.run_once(position_measurements[:, ii])
+
+        if debug_print:
+            print("measurement", position_measurements[:, ii])
+            print("position", np.round(pos_filter.position, 5))
+            print("velocity", np.round(pos_filter.velocity, 5))
+
+    # After many loops velocity ends up at expected
+    assert np.allclose(vel_estimated, pos_filter.velocity, atol=1e-2)
+
+
+def test_orientation_filter(debug_print=False):
+    n_measurements = 21
+
+    # Do the euler angles
+    rho = np.linspace(0, np.pi / 2, n_measurements)
+    phi = np.linspace(0, 0, n_measurements)
+    gamma = np.linspace(0, 0, n_measurements)
+    orientation_measurements = np.vstack((rho, phi, gamma))
+
+    pos_filter = OrientationFilter(update_frequency=10.0)
+    pos_filter.reset_position(
+        Rotation.from_euler(orientation_measurements[:, 0]).as_quat()
+    )
+
+    pos_filter.run_once(Rotation.from_euler(orientation_measurements[:, 0]).as_quat())
+
+    # Directly after standstill, velocity is estimated to be at 0
+    # assert not np.allclose(vel_estimated, pos_filter.velocity, atol=1e-2)
+
+    if debug_print:
+        print("measurement", position_measurements[:, 0])
+        print("position", np.round(pos_filter.position, 5))
+        print("velocity", np.round(pos_filter.velocity, 5))
+
+    for ii in range(1, position_measurements.shape[1]):
+        pos_filter.run_once(position_measurements[:, ii])
+
+        if debug_print:
+            print("measurement", position_measurements[:, ii])
+            print("position", np.round(pos_filter.position, 5))
+            print("velocity", np.round(pos_filter.velocity, 5))
+
+    # After many loops velocity ends up at expected
+    assert np.allclose(vel_estimated, pos_filter.velocity, atol=1e-2)
 
 
 if (__name__) == "__main__":
-    main()
+    # test_position_filter(debug_print=True)
+
+    test_orientation_filter(debug_print=True)
