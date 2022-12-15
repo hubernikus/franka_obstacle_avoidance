@@ -16,7 +16,7 @@ def get_angular_velocity_from_quaterions(
 ) -> np.ndarray:
     """Returns the angular velocity required to reach quaternion 'q2'
     from quaternion 'q1' within the timestep 'dt'."""
-    delta_q = q2.apply(q1.inv)
+    delta_q = (q2 * q1.inv()).as_quat()
     delta_q = delta_q / LA.norm(delta_q)
 
     delta_q_norm = LA.norm(delta_q[1:])
@@ -37,14 +37,14 @@ class OrientationFilter:
 
         self.dt = 1.0 / update_frequency
 
-        self.x = np.zeros(self._kf.dim_x)
+        self._kf.x = np.zeros(self._kf.dim_x)
 
         # State transition matrix (dummy matrix for now)
         self._kf.F = np.eye(self._kf.dim_x)
 
         # Measurement function (measures position only)
         # self._kf.H = np.vstack((np.eye(4), np.zeros((3, 4))))
-        self._kf.F = np.eye(self._kf.dim_x)
+        self._kf.H = np.eye(self._kf.dim_x)
 
         # Covariance matrix
         self._kf.P = np.eye(self._kf.dim_x)
@@ -58,43 +58,57 @@ class OrientationFilter:
         )
         self._kf.Q = Q[: self._kf.dim_x, : self._kf.dim_x]
 
-    def compute_once(self, quaternion_measurement: np.ndarray):
+    def run_once(self, rotation_measurement: Rotation):
         velocity_estimate = get_angular_velocity_from_quaterions(
             self.orientation,
-            Rotation.from_quat(quaternion_measurement),
+            rotation_measurement,
             self.dt,
         )
 
+        self._normalize_quaternion()
         self.update_state_transition()
+
         self._kf.predict()
-        self._kf.update(np.hstack((quaternion_measurement, velocity_estimate)))
+        self._kf.update(np.hstack((rotation_measurement.as_quat(), velocity_estimate)))
+
+    def _normalize_quaternion(self) -> None:
+        quat_norm = LA.norm(self.quaternion)
+        if quat_norm:
+            self.reset_quaternion(self.quaternion / quat_norm)
+        else:
+            qq = np.zeros(4)
+            qq[-1] = 1
+            self.reset_quaternion(qq)
 
     def update_state_transition(self):
-        self._kf.F = np.eye(self.dim_x)
+        self._kf.F = np.eye(self._kf.dim_x)
 
         # Quaternion / Get rotation matrix
         wx = self.velocity[0]
         wy = self.velocity[1]
         wz = self.velocity[2]
 
-        Omega_t = np.zeros(4, 4)
+        Omega_t = np.zeros((4, 4))
         Omega_t[0, :] = [0, -wx, -wy, -wz]
         Omega_t[1, :] = [wx, 0, wz, -wy]
         Omega_t[2, :] = [wy, -wz, 0, wx]
         Omega_t[3, :] = [wz, wy, -wx, 0]
-
-        self._kf.F[:4, :][:, 4:] = 0.5 * self.dt * Omega_t
+        self._kf.F[:4, :4] = self._kf.F[:4, :4] + 0.5 * self.dt * Omega_t
 
     @property
     def quaternion(self) -> np.ndarray:
         return self._kf.x[:4]
 
+    def reset_quaternion(self, value: np.ndarray) -> None:
+        # Flatten to matrix as scipy.transform.Rotation outputs a matrix
+        self._kf.x[:4] = value.flatten()
+
     @property
     def orientation(self) -> Rotation:
         return Rotation.from_quat(self._kf.x[:4])
 
-    def reset_quaternion(self, value) -> None:
-        self._kf.x[:4] = value
+    def reset_rotation(self, value: Rotation) -> None:
+        self._kf.x[:4] = value.as_quat().flatten()
 
     @property
     def velocity(self) -> np.ndarray:
@@ -154,7 +168,7 @@ class PositionFilter:
         return self._kf.x[: self.dimension]
 
     def reset_velocity(self, value: np.ndarray) -> None:
-        self._kf.x[self.dimension :] = value
+        self._kf.x[self.dimension :] = value.flatten()
 
     @property
     def velocity(self) -> np.ndarray:
@@ -285,42 +299,43 @@ def test_position_filter(debug_print=False):
 
 
 def test_orientation_filter(debug_print=False):
-    n_measurements = 21
+    n_measurements = 41
 
     # Do the euler angles
-    rho = np.linspace(0, np.pi / 2, n_measurements)
+    rho = np.linspace(0, 0, n_measurements)
     phi = np.linspace(0, 0, n_measurements)
-    gamma = np.linspace(0, 0, n_measurements)
+    gamma = np.linspace(0, np.pi / 2, n_measurements)
     orientation_measurements = np.vstack((rho, phi, gamma))
 
-    pos_filter = OrientationFilter(update_frequency=10.0)
-    pos_filter.reset_position(
-        Rotation.from_euler(orientation_measurements[:, 0]).as_quat()
+    rot_filter = OrientationFilter(update_frequency=10.0)
+    rot_filter.reset_rotation(
+        Rotation.from_euler("zyx", orientation_measurements[:, 0])
     )
-
-    pos_filter.run_once(Rotation.from_euler(orientation_measurements[:, 0]).as_quat())
+    rot_filter.run_once(Rotation.from_euler("xyz", orientation_measurements[:, 0]))
+    # breakpoint()
 
     # Directly after standstill, velocity is estimated to be at 0
     # assert not np.allclose(vel_estimated, pos_filter.velocity, atol=1e-2)
 
     if debug_print:
-        print("measurement", position_measurements[:, 0])
-        print("position", np.round(pos_filter.position, 5))
-        print("velocity", np.round(pos_filter.velocity, 5))
+        print("measurement", orientation_measurements[:, 0])
+        print("position", np.round(rot_filter.quaternion, 5))
+        print("velocity", np.round(rot_filter.velocity, 5))
 
-    for ii in range(1, position_measurements.shape[1]):
-        pos_filter.run_once(position_measurements[:, ii])
+    for ii in range(1, orientation_measurements.shape[1]):
+        rotation = Rotation.from_euler("zyx", orientation_measurements[:, ii])
+        rot_filter.run_once(rotation)
 
         if debug_print:
-            print("measurement", position_measurements[:, ii])
-            print("position", np.round(pos_filter.position, 5))
-            print("velocity", np.round(pos_filter.velocity, 5))
+            print()
+            print("measurement", rotation.as_quat())
+            print("quaternion", np.round(rot_filter.quaternion, 5))
+            print("ang velocity", np.round(rot_filter.velocity, 5))
 
     # After many loops velocity ends up at expected
-    assert np.allclose(vel_estimated, pos_filter.velocity, atol=1e-2)
+    # assert np.allclose(, pos_filter.velocity, atol=1e-2)
 
 
 if (__name__) == "__main__":
     # test_position_filter(debug_print=True)
-
     test_orientation_filter(debug_print=True)
