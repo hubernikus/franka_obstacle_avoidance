@@ -29,18 +29,6 @@ class VisualizationHandler(Protocol):
     def update(self, obstacles: list[Obstacle], obstacle_ids: list[int]) -> None:
         ...
 
-        
-class OptitrackObstacle():
-    def __init__(self, obstacle: Obstacle, topic_name: str, frequency: float):
-        # What !?
-        self.position_filter = PositionFilter(frequency=frequency)
-        self.orientation_filter = PositionFilter(frequency=frequency)
-
-        # TODO: set initial values (...)                
-        
-    def state_callback(self, msg):
-        pass
-        
 
 class OptitrackContainer(ObstacleContainer):
     def __init__(
@@ -74,9 +62,14 @@ class OptitrackContainer(ObstacleContainer):
     ):
         super().append(obstacle)
 
-        self.
+    def update(self) -> None:
+        if self.optitrack_interface is None:
+            return
 
-    def callback(self):
+        # Set positions
+        self.a = 0
+        self.optitrack_reciever = None
+
         pass
 
     def shutdown(self):

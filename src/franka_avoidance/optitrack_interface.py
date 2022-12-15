@@ -30,7 +30,7 @@ class OptitrackInterface:
         self.socket.bind(tcp_socket)
         self.socket.setsockopt(zmq.SUBSCRIBE, b"")
 
-    def get_message(self) -> list[RigidBody]:
+    def get_messages(self) -> list[RigidBody]:
         print("Collecting optitrack-data from zmq-server...")
 
         binary_data = self.socket.recv()
