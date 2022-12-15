@@ -24,9 +24,46 @@ def get_angular_velocity_from_quaterions(
     return delta_q[1:] * (delta_q_angle / dt)
 
 
+class SimpleOrientationFilter:
+    """Very simplified rotational velocity filter"""
+
+    def __init__(self, frequency: float, initial_orientation: Rotation = None):
+        self._transition_weight = 0.95
+
+        if initial_orientation is None:
+            self._rotation = Rotation.from_euler("xyz", [0, 0, 0])
+        else:
+            self._rotation = initial_orientation
+        self.angular_velocity = np.zeros(3)
+
+        self.dt = 1 / frequency
+
+    def run_once(self, rotation_measurement: Rotation):
+        ang_vel_estimate = get_angular_velocity_from_quaterions(
+            self._rotation,
+            rotation_measurement,
+            self.dt,
+        )
+        # Assumption of new rotation
+        self._rotation = rotation_measurement
+        self.angular_velocity = (
+            1 - self._transition_weight
+        ) * self.angular_velocity + self._transition_weight * ang_vel_estimate
+
+    @property
+    def quaternion(self) -> np.ndarray:
+        """Returns [x, y, z, w] quaternion."""
+        return self._rotation.as_quat()
+
+    @property
+    def rotation(self) -> Rotation:
+        return self._rotation
+
+
 class OrientationFilter:
     """Orientation filter easy to use with optitrack.
 
+    Explanation found on:
     https://ahrs.readthedocs.io/en/latest/filters/ekf.html
     """
 
@@ -42,7 +79,7 @@ class OrientationFilter:
 
         self._kf.x = np.zeros(self._kf.dim_x)
 
-        # State transition matrix (dummy matrix for now)
+        # State transition matrix (dummy matrix to start with)
         self._kf.F = np.eye(self._kf.dim_x)
 
         # Measurement function (measures position only)
@@ -50,14 +87,14 @@ class OrientationFilter:
         self._kf.H = np.eye(self._kf.dim_x)
 
         # Covariance matrix
-        self._kf.P = np.eye(self._kf.dim_x)
+        self._kf.P = np.eye(self._kf.dim_x) * 1
 
         # Measurement noise
         self._kf.R = np.eye(self._kf.dim_x) * 0.01
 
         # Process noise [it is cut to fit 4 quaternions - 3 rotation-matrix]
         Q = Q_discrete_white_noise(
-            dim=2, dt=self.dt, var=0.01, block_size=4, order_by_dim=False
+            dim=2, dt=self.dt, var=1e-3, block_size=4, order_by_dim=False
         )
         self._kf.Q = Q[: self._kf.dim_x, : self._kf.dim_x]
 
@@ -67,14 +104,15 @@ class OrientationFilter:
             rotation_measurement,
             self.dt,
         )
+
         # Move to local frame
         ang_vel_estimate = self.orientation.inv().apply(ang_vel_estimate)
 
         self._normalize_quaternion()
-        self.update_state_transition()
+        self.update_state_transition(ang_vel_estimate)
 
         self._kf.predict()
-        self._kf.update(np.hstack((rotation_measurement.as_quat(), velocity_estimate)))
+        self._kf.update(np.hstack((rotation_measurement.as_quat(), ang_vel_estimate)))
 
     def _normalize_quaternion(self) -> None:
         quat_norm = LA.norm(self.quaternion)
@@ -85,21 +123,30 @@ class OrientationFilter:
             qq[-1] = 1
             self.reset_quaternion(qq)
 
-    def update_state_transition(self):
+    # def update_process_noise(self):
+    # dim=2, dt=self.dt, var=0.01, block_size=4, order_by_dim=False
+
+    def update_state_transition(self, velocity_estimate: np.ndarray):
         self._kf.F = np.eye(self._kf.dim_x)
 
         # Quaternion / Get rotation matrix
-        wx = self.velocity[0]
-        wy = self.velocity[1]
-        wz = self.velocity[2]
+        # wx = self.velocity[0]
+        # wy = self.velocity[1]
+        # wz = self.velocity[2]
+        wx, wy, wz = tuple(velocity_estimate)
 
+        # Calculate omega-matrix for quaternions given by (q_x, q_y, q_z, q_w)
         Omega_t = np.zeros((4, 4))
         Omega_t[0, :] = [0, -wx, -wy, -wz]
         Omega_t[1, :] = [wx, 0, wz, -wy]
         Omega_t[2, :] = [wy, -wz, 0, wx]
         Omega_t[3, :] = [wz, wy, -wx, 0]
+
+        # Transform (q_w, q_x, q_y, q_z) to (q_x, q_y, q_z, q_w)
+        Omega_t = np.vstack((Omega_t[1:, :], Omega_t[0, :].reshape(1, -1)))
+        Omega_t = np.hstack((Omega_t[:, 1:], Omega_t[:, 0].reshape(-1, 1)))
+
         self._kf.F[:4, :4] = self._kf.F[:4, :4] + 0.5 * self.dt * Omega_t
-        breakpoint()
 
     @property
     def quaternion(self) -> np.ndarray:
@@ -337,6 +384,45 @@ def test_orientation_filter(debug_print=False):
             print("measurement", rotation.as_quat())
             print("quaternion", np.round(rot_filter.quaternion, 5))
             print("ang velocity", np.round(rot_filter.velocity, 5))
+
+    # After many loops velocity ends up at expected
+    # assert np.allclose(, pos_filter.velocity, atol=1e-2)
+
+
+def test_orientation_filter(debug_print=False):
+    n_measurements = 11
+
+    # Do the euler angles
+    rho = np.linspace(0, 0, n_measurements)
+    phi = np.linspace(0, 0, n_measurements)
+    gamma = np.linspace(0, np.pi / 2, n_measurements)
+    orientation_measurements = np.vstack((rho, phi, gamma))
+
+    rot_filter = SimpleOrientationFilter(
+        frequency=100,
+        initial_orientation=Rotation.from_euler("zyx", orientation_measurements[:, 0]),
+    )
+
+    rot_filter.run_once(Rotation.from_euler("xyz", orientation_measurements[:, 0]))
+    # breakpoint()
+
+    # Directly after standstill, velocity is estimated to be at 0
+    # assert not np.allclose(vel_estimated, pos_filter.velocity, atol=1e-2)
+
+    if debug_print:
+        print("measurement", orientation_measurements[:, 0])
+        print("position", np.round(rot_filter.quaternion, 5))
+        print("velocity", np.round(rot_filter.angular_velocity, 5))
+
+    for ii in range(1, orientation_measurements.shape[1]):
+        rotation = Rotation.from_euler("zyx", orientation_measurements[:, ii])
+        rot_filter.run_once(rotation)
+
+        if debug_print:
+            print()
+            print("measurement", rotation.as_quat())
+            print("quaternion", np.round(rot_filter.quaternion, 5))
+            print("ang velocity", np.round(rot_filter.angular_velocity, 5))
 
     # After many loops velocity ends up at expected
     # assert np.allclose(, pos_filter.velocity, atol=1e-2)

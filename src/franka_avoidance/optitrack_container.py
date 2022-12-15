@@ -6,6 +6,8 @@ import warnings
 from typing import Protocol, Optional
 
 # from enum import Enum, auto
+import rclpy
+from rclpy.node import Node
 
 import numpy as np
 
@@ -17,6 +19,8 @@ from franka_avoidance.optitrack_interface import OptitrackInterface
 from franka_avoidance.pybullet_handler import PybulletHandler
 from franka_avoidance.rviz_handler import RvizHandler
 
+from franka_avoidance.state_filters import PositionFilter, SimpleOrientationFilter
+
 
 class VisualizationHandler(Protocol):
     """Visualization handler which allows updating / publishing the with corresponding
@@ -25,6 +29,18 @@ class VisualizationHandler(Protocol):
     def update(self, obstacles: list[Obstacle], obstacle_ids: list[int]) -> None:
         ...
 
+        
+class OptitrackObstacle():
+    def __init__(self, obstacle: Obstacle, topic_name: str, frequency: float):
+        # What !?
+        self.position_filter = PositionFilter(frequency=frequency)
+        self.orientation_filter = PositionFilter(frequency=frequency)
+
+        # TODO: set initial values (...)                
+        
+    def state_callback(self, msg):
+        pass
+        
 
 class OptitrackContainer(ObstacleContainer):
     def __init__(
@@ -53,10 +69,12 @@ class OptitrackContainer(ObstacleContainer):
     def append(
         self,
         obstacle: Obstacle,
-        obstacle_id: int,
+        obstacle_topic: "str" = None,
         # start_position: np.ndarray,
     ):
         super().append(obstacle)
+
+        self.
 
     def callback(self):
         pass
