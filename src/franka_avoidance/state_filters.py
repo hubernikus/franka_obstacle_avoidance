@@ -25,7 +25,10 @@ def get_angular_velocity_from_quaterions(
 
 
 class OrientationFilter:
-    """Orientation filter easy to use with optitrack."""
+    """Orientation filter easy to use with optitrack.
+
+    https://ahrs.readthedocs.io/en/latest/filters/ekf.html
+    """
 
     def __init__(self, update_frequency: float = 100.0):
         # Measure Quaternion - Estimate Quaternion and Position
@@ -59,11 +62,13 @@ class OrientationFilter:
         self._kf.Q = Q[: self._kf.dim_x, : self._kf.dim_x]
 
     def run_once(self, rotation_measurement: Rotation):
-        velocity_estimate = get_angular_velocity_from_quaterions(
+        ang_vel_estimate = get_angular_velocity_from_quaterions(
             self.orientation,
             rotation_measurement,
             self.dt,
         )
+        # Move to local frame
+        ang_vel_estimate = self.orientation.inv().apply(ang_vel_estimate)
 
         self._normalize_quaternion()
         self.update_state_transition()
@@ -94,6 +99,7 @@ class OrientationFilter:
         Omega_t[2, :] = [wy, -wz, 0, wx]
         Omega_t[3, :] = [wz, wy, -wx, 0]
         self._kf.F[:4, :4] = self._kf.F[:4, :4] + 0.5 * self.dt * Omega_t
+        breakpoint()
 
     @property
     def quaternion(self) -> np.ndarray:
@@ -299,7 +305,7 @@ def test_position_filter(debug_print=False):
 
 
 def test_orientation_filter(debug_print=False):
-    n_measurements = 41
+    n_measurements = 11
 
     # Do the euler angles
     rho = np.linspace(0, 0, n_measurements)
