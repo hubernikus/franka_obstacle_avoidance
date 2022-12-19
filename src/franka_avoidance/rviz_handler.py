@@ -65,8 +65,10 @@ class RvizHandler(Node):
         return marker
 
     def update(self, obstacles: list[Obstacle], obstacle_ids: list) -> None:
+        # print("Doing rviz handle.")
         existing_ids = np.array([marker.id for marker in self.marker_array.markers])
 
+        # breakpoint()
         for obs, id_obs in zip(obstacles, obstacle_ids):
             indexes_marker = np.where(existing_ids == id_obs)[0]
             if not len(indexes_marker):
@@ -90,8 +92,12 @@ class RvizHandler(Node):
         if len(obstacles) != len(self.marker_array.markers):
             raise NotImplementedError("Implemented removing of obstacles.")
 
+        print("Publish obstalces.")
         self.publisher_.publish(self.marker_array)
 
     def remove_all_obstacles(self):
-        self.marker_array.markers = []
-        self.publisher_.publish(self.marker_array)
+        try:
+            self.marker_array.markers = []
+            self.publisher_.publish(self.marker_array)
+        except rclpy._rclpy_pybind11.RCLError:
+            print("ROScly-node already shutdown - no empty publishing possible.")

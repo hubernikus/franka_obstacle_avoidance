@@ -55,9 +55,10 @@ class OptitrackContainer(ObstacleContainer):
 
         self.visualization_handler = visualization_handler
 
-    def update_obstacles(self):
+    def update(self):
         """Update positions based on optitrack."""
-        if not self.visualization_handler is None:
+        if self.visualization_handler is not None:
+            print("Go to rviz handler.")
             obstacle_ids = np.arange(len(self))
             self.visualization_handler.update(self, obstacle_ids)
 

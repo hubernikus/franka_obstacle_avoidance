@@ -13,12 +13,16 @@ from network_interfaces.zmq.network import CommandMessage
 
 class VelocityAvoidanceController(Node):
     def __init__(
-        self, robot, freq: float = 100, node_name: str = "velocity_avoidance_controller", obstacles: OptitrackContainer = None):
+        self,
+        robot,
+        freq: float = 100,
+        node_name: str = "velocity_avoidance_controller",
+        obstacles: OptitrackContainer = None,
     ):
         super().__init__(node_name)
 
         self.robot = robot
-        self.rate = sel.create_rate(freq)
+        self.rate = self.create_rate(freq)
 
         self.command = CommandMessage()
 
@@ -28,10 +32,9 @@ class VelocityAvoidanceController(Node):
             if not state:
                 continue
 
-            
-
 
 if "__name__" == "__main__":
+    print("Start node.")
     rclpy.init()
 
     robot = RobotInterface()
@@ -46,6 +49,9 @@ if "__name__" == "__main__":
     obstacles.visualization_handler = RvizHandler(obstacles)
 
     controller = VelocityAvoidanceController(robot, freq=100, obstacles=obstacles)
-    controller.run()
+    try:
+        controller.run()
+    except:
+        print("Shutting down.")
 
     rclpy.shutdown()

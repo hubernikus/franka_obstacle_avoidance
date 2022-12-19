@@ -19,7 +19,9 @@ from franka_avoidance.optitrack_container import OptitrackContainer
 from franka_avoidance.rviz_handler import RvizHandler
 
 
-def main():
+def main(frequency: float = 100):
+    delta_time = 1.0 / frequency
+    print("Start single obstacle node.")
     obstacles = OptitrackContainer(use_optitrack=False)
     obstacles.append(
         Ellipse(
@@ -31,9 +33,9 @@ def main():
     obstacles.visualization_handler = RvizHandler(obstacles)
 
     try:
-        for ii in range(100):
-            obstacles.update_obstacles()
-            time.sleep(0.2)
+        while True:
+            obstacles.update()
+            time.sleep(delta_time)
     except KeyboardInterrupt:
         print("KeyboardInterrupt detected.")
 

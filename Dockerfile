@@ -22,6 +22,20 @@ RUN sudo rm -rf /tmp/network-interfaces
 RUN sudo pip3 install pybullet
 RUN sudo ldconfig
 
+# Pybullet Setup
+WORKDIR ${HOME}
+RUN mkdir lib
+WORKDIR ${HOME}/lib
+RUN git clone -b main --single-branch https://github.com/hubernikus/simulator-backend.git
+# RUN git clone -b main --single-branch https://github.com/aica-technology/simulator-backend.git
+RUN sudo mv ./simulator-backend/pybullet_zmq ..
+RUN sudo mv ./simulator-backend/pybullet_simulation ..
+
+WORKDIR ${HOME}
+RUN pip3 install --editable ./pybullet_simulation
+RUN pip3 install --editable ./pybullet_zmq
+RUN rm -rd lib  
+
 # Install needed (local) python packages
 RUN mkdir ${HOME}/python
 
@@ -59,11 +73,16 @@ RUN git clone -b main --single-branch https://github.com/MerihEkin/epfl_semester
 WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance/project_ekin
 RUN python3 -m pip install --editable .
 
+# Install Robot description
+WORKDIR /home/${USER}/ros2_ws/src
+RUN git clone -b v0.1.0 --single-branch https://github.com/aica-technology/franka_panda_description.git
+
 WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
 # Copy the local folder
 COPY --chown=${USER} src src
 COPY --chown=${USER} scripts scripts
 COPY --chown=${USER} examples examples
+COPY --chown=${USER} rviz rviz
 # COPY --chown=${USER} local 
 COPY --chown=${USER} requirements.txt requirements.txt
 COPY --chown=${USER} setup.py setup.py
@@ -74,27 +93,14 @@ RUN python3 -m pip install --editable .
 # Delete unnecessary files (somehow this doe now work ?!)
 RUN rm -f setup.py requirements.txt
 
-# Install Robot description
-WORKDIR /home/${USER}/ros2_ws/src
-RUN git clone -b v0.1.0 --single-branch https://github.com/aica-technology/franka_panda_description.git
-
 # Install ros2
 WORKDIR /home/${USER}/ros2_ws/src
 RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash; colcon build --symlink-install"
 
-# Pybullet Setup
-WORKDIR ${HOME}
-RUN mkdir lib
-WORKDIR ${HOME}/lib
-RUN git clone -b main --single-branch https://github.com/hubernikus/simulator-backend.git
-# RUN git clone -b main --single-branch https://github.com/aica-technology/simulator-backend.git
-RUN sudo mv ./simulator-backend/pybullet_zmq ..
-RUN sudo mv ./simulator-backend/pybullet_simulation ..
-
-WORKDIR ${HOME}
-RUN pip3 install --editable ./pybullet_simulation
-RUN pip3 install --editable ./pybullet_zmq
-RUN rm -rd lib  
+# Enable rviz?!
+RUN sudo apt-get install -y libxcb-util1
+RUN sudo apt-get install -y libqt5gui5
+ENV QT_DEBUG_PLUGINS=1
 
 # # Clean image
 # RUN sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*
