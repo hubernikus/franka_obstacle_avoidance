@@ -27,7 +27,7 @@ def get_angular_velocity_from_quaterions(
 class SimpleOrientationFilter:
     """Very simplified rotational velocity filter"""
 
-    def __init__(self, frequency: float, initial_orientation: Rotation = None):
+    def __init__(self, update_frequency: float, initial_orientation: Rotation = None):
         self._transition_weight = 0.95
 
         if initial_orientation is None:
@@ -36,7 +36,7 @@ class SimpleOrientationFilter:
             self._rotation = initial_orientation
         self.angular_velocity = np.zeros(3)
 
-        self.dt = 1 / frequency
+        self.dt = 1 / update_frequency
 
     def run_once(self, rotation_measurement: Rotation):
         ang_vel_estimate = get_angular_velocity_from_quaterions(
@@ -175,7 +175,9 @@ class PositionFilter:
     """Implementation of kalman filter for position
     -> x-y-z could be separated / simpler filter as they are independant."""
 
-    def __init__(self, update_frequency: float = 100.0):
+    def __init__(
+        self, update_frequency: float = 100.0, initial_position: np.ndarray = None
+    ):
         self.dimension = 3
 
         # Measure Position - Estimate Velocity
@@ -206,6 +208,9 @@ class PositionFilter:
         self._kf.Q = Q_discrete_white_noise(
             dim=2, dt=self.dt, var=0.01, block_size=3, order_by_dim=False
         )
+
+        if initial_position is not None:
+            self.reset_position(initial_position)
 
     def run_once(self, position_measurement: np.ndarray) -> None:
         velocity_estimate = (position_measurement - self.position) / self.dt
@@ -399,7 +404,7 @@ def test_orientation_filter(debug_print=False):
     orientation_measurements = np.vstack((rho, phi, gamma))
 
     rot_filter = SimpleOrientationFilter(
-        frequency=100,
+        update_frequency=100,
         initial_orientation=Rotation.from_euler("zyx", orientation_measurements[:, 0]),
     )
 

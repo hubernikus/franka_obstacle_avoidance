@@ -1,6 +1,7 @@
 """
 Container which smoothenes position (and rotation) of incoming obstacles.
 """
+import copy
 import warnings
 
 from typing import Protocol, Optional
@@ -11,13 +12,13 @@ from rclpy.node import Node
 
 import numpy as np
 
+from vartools.states import ObjectPose
+
 from dynamic_obstacle_avoidance.obstacles import Obstacle
 from dynamic_obstacle_avoidance.obstacles import EllipseWithAxes as Ellipse
 from dynamic_obstacle_avoidance.containers import ObstacleContainer
 
 from franka_avoidance.optitrack_interface import OptitrackInterface
-from franka_avoidance.pybullet_handler import PybulletHandler
-from franka_avoidance.rviz_handler import RvizHandler
 
 from franka_avoidance.state_filters import PositionFilter, SimpleOrientationFilter
 
@@ -31,46 +32,82 @@ class VisualizationHandler(Protocol):
 
 
 class OptitrackContainer(ObstacleContainer):
+    # TODO: This OptitrackContainer could just be a handler which contains an obstacleContainer
     def __init__(
         self,
         visualization_handler: Optional[VisualizationHandler] = None,
         use_optitrack: bool = True,
+        update_frequency: float = 100.0,
     ):
         super().__init__()
-        obstacle_ids = []
-        obstacle_offsets = []
+        self.obstacle_ids = []
+        self.obstacle_offsets = []
+        self.position_filters = []
+        self.orientation_filters = []
+        self.update_frequency = update_frequency
 
         # Setup full optitrack callback
         self.use_optitrack = use_optitrack
         if use_optitrack:
-            self.optitrack_reciever = OptitrackInterface()
+            self.optitrack_interface = OptitrackInterface()
+        else:
+            self.optitrack_interface = None
+
         self.visualization_handler = visualization_handler
 
     def update_obstacles(self):
         """Update positions based on optitrack."""
-        if self.visualization_handler is None:
-            return
+        if not self.visualization_handler is None:
+            obstacle_ids = np.arange(len(self))
+            self.visualization_handler.update(self, obstacle_ids)
 
-        obstacle_ids = np.arange(len(self))
-        self.visualization_handler.update(self, obstacle_ids)
+        if self.optitrack_interface is not None:
+            self.update_from_optitrack()
 
     def append(
         self,
         obstacle: Obstacle,
-        obstacle_topic: "str" = None,
+        obstacle_id: "str" = None,
         # start_position: np.ndarray,
     ):
         super().append(obstacle)
+        self.obstacle_ids.append(obstacle_id)
+        self.obstacle_offsets.append(copy.deepcopy(obstacle.pose))
+        self.position_filters.append(
+            PositionFilter(
+                update_frequency=self.update_frequency,
+                initial_position=obstacle.pose.position,
+            )
+        )
+        self.orientation_filters.append(
+            SimpleOrientationFilter(
+                update_frequency=self.update_frequency,
+                initial_orientation=obstacle.pose.orientation,
+            )
+        )
 
-    def update(self) -> None:
-        if self.optitrack_interface is None:
-            return
-
+    def update_from_optitrack(self) -> None:
         # Set positions
-        self.a = 0
-        self.optitrack_reciever = None
+        obs_optitrack = self.optitrack_reciever.get_messages()
+        for oo, obs_oo in enumerate(obs_optitrack):
+            try:
+                idx = self._obstacle_ids.index(obs_oo.obs_id)
+            except ValueError:
+                warnings.warn(
+                    f"Obstacle with id {obs_oo.obs_id} not found in obstacle container."
+                )
+                continue
 
-        pass
+            # Update position
+            self.position_filters[idx].run_once(obs_oo.position)
+            self.orientation_filters[idx].run_once(obs_oo.rotation)
+
+            # Update obstacle
+            self[idx].pose.position = self.position_filters[idx].position
+            self[idx].pose.orientation = self.orientation_filters[idx].orientation
+
+            self[idx].linear_velocity = self.position_filters[idx].velocity
+            self[idx].angular_velocity = self.orientation_filters[idx].angular_velocity
 
     def shutdown(self):
         self.visualization_handler.remove_all_obstacles()
