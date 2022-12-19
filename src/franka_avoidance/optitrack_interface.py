@@ -24,15 +24,18 @@ class OptitrackInterface:
     msg_structure = "iffffffff"
 
     def __init__(self, tcp_socket: str = "tcp://0.0.0.0:5511"):
+
         context = zmq.Context()
         self.socket = context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.CONFLATE, 1)
         self.socket.bind(tcp_socket)
         self.socket.setsockopt(zmq.SUBSCRIBE, b"")
 
+        # Avoid infinite wait
+        self.socket.setsockopt(zmq.LINGER, 0)
+
     def get_messages(self) -> list[RigidBody]:
         print("Collecting optitrack-data from zmq-server...")
-
         binary_data = self.socket.recv()
 
         bodies = []

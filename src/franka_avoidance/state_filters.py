@@ -16,11 +16,12 @@ def get_angular_velocity_from_quaterions(
 ) -> np.ndarray:
     """Returns the angular velocity required to reach quaternion 'q2'
     from quaternion 'q1' within the timestep 'dt'."""
-    delta_q = (q2 * q1.inv()).as_quat()
+    delta_q = (q2 * q1.inv()).as_quat().flatten()
     delta_q = delta_q / LA.norm(delta_q)
 
     delta_q_norm = LA.norm(delta_q[1:])
     delta_q_angle = 2 * np.arctan2(delta_q_norm, delta_q[0])
+
     return delta_q[1:] * (delta_q_angle / dt)
 
 
@@ -46,6 +47,7 @@ class SimpleOrientationFilter:
         )
         # Assumption of new rotation
         self._rotation = rotation_measurement
+
         self.angular_velocity = (
             1 - self._transition_weight
         ) * self.angular_velocity + self._transition_weight * ang_vel_estimate
@@ -90,7 +92,7 @@ class OrientationFilter:
         self._kf.P = np.eye(self._kf.dim_x) * 1
 
         # Measurement noise
-        self._kf.R = np.eye(self._kf.dim_x) * 0.01
+        self._kf.R = np.eye(self._kf.dim_x) * 0.1
 
         # Process noise [it is cut to fit 4 quaternions - 3 rotation-matrix]
         Q = Q_discrete_white_noise(
@@ -202,12 +204,13 @@ class PositionFilter:
         self._kf.P = np.eye(self._kf.dim_x)
 
         # Measurement noise
-        self._kf.R = np.eye(self._kf.dim_x) * 0.01
+        self._kf.R = np.eye(self._kf.dim_x) * 0.001
 
         # Process noise
         self._kf.Q = Q_discrete_white_noise(
-            dim=2, dt=self.dt, var=0.01, block_size=3, order_by_dim=False
+            dim=2, dt=self.dt, var=1e-1, block_size=3, order_by_dim=False
         )
+        self._kf.Q[self.dimension :, self.dimension :] = np.eye(self.dimension) * 5e-4
 
         if initial_position is not None:
             self.reset_position(initial_position)

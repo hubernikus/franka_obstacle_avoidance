@@ -58,7 +58,6 @@ class OptitrackContainer(ObstacleContainer):
     def update(self):
         """Update positions based on optitrack."""
         if self.visualization_handler is not None:
-            print("Go to rviz handler.")
             obstacle_ids = np.arange(len(self))
             self.visualization_handler.update(self, obstacle_ids)
 
@@ -88,12 +87,14 @@ class OptitrackContainer(ObstacleContainer):
         )
 
     def update_from_optitrack(self) -> None:
+        print("Updating obstacles.")
         # Set positions
-        obs_optitrack = self.optitrack_reciever.get_messages()
-        for oo, obs_oo in enumerate(obs_optitrack):
+        obs_optitrack = self.optitrack_interface.get_messages()
+        for obs_oo in obs_optitrack:
             try:
-                idx = self._obstacle_ids.index(obs_oo.obs_id)
+                idx = self.obstacle_ids.index(obs_oo.obs_id)
             except ValueError:
+                print(f"Not this time number {obs_oo.obs_id}")
                 warnings.warn(
                     f"Obstacle with id {obs_oo.obs_id} not found in obstacle container."
                 )
@@ -104,11 +105,20 @@ class OptitrackContainer(ObstacleContainer):
             self.orientation_filters[idx].run_once(obs_oo.rotation)
 
             # Update obstacle
-            self[idx].pose.position = self.position_filters[idx].position
-            self[idx].pose.orientation = self.orientation_filters[idx].orientation
+            self[idx].pose.position = self.position_filters[
+                idx
+            ].position + self.orientation_filters[idx].rotation.apply(
+                self.obstacle_offsets[idx].position
+            )
+            self[idx].pose.orientation = (
+                self.orientation_filters[idx].rotation
+                * self.obstacle_offsets[idx].orientation
+            )
 
             self[idx].linear_velocity = self.position_filters[idx].velocity
             self[idx].angular_velocity = self.orientation_filters[idx].angular_velocity
+
+            print("Obstacle", np.round(self[idx].linear_velocity, 3))
 
     def shutdown(self):
         self.visualization_handler.remove_all_obstacles()

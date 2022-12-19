@@ -19,15 +19,15 @@ from franka_avoidance.optitrack_container import OptitrackContainer
 from franka_avoidance.rviz_handler import RvizHandler
 
 
-def main(frequency: float = 100):
+def main(frequency: float = 10):
     delta_time = 1.0 / frequency
     print("Start single obstacle node.")
-    obstacles = OptitrackContainer(use_optitrack=False)
+    obstacles = OptitrackContainer(use_optitrack=True)
     obstacles.append(
         Ellipse(
             center_position=np.array([0.3, 2, 0]), axes_length=np.array([0.3, 0.3, 0.3])
         ),
-        obstacle_id=0,
+        obstacle_id=27,
     )
 
     obstacles.visualization_handler = RvizHandler(obstacles)

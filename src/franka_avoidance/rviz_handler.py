@@ -92,7 +92,6 @@ class RvizHandler(Node):
         if len(obstacles) != len(self.marker_array.markers):
             raise NotImplementedError("Implemented removing of obstacles.")
 
-        print("Publish obstalces.")
         self.publisher_.publish(self.marker_array)
 
     def remove_all_obstacles(self):

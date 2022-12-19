@@ -129,4 +129,7 @@ dmypy.json
 .pyre/
 
 # Vscode
-.vsoce/*
+.vscode/*
+
+# Tokens
+*token
