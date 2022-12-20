@@ -19,3 +19,6 @@ class RobotZmqInterface(object):
 
     def send_command(self, command: network.CommandMessage()):
         network.send_command(command, self.__publisher)
+
+    def ros2_publisher(self):
+        pass

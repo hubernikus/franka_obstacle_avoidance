@@ -58,44 +58,49 @@ RUN python3 -m pip install --editable .
 # RUN chmod 600 ${HOME}/.ssh/id_rsa
 # RUN ssh-keyscan github.com >> ${HOME}/.ssh/known_hosts
 
-RUN mkdir -p /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
+RUN mkdir -p /home/${USER}/ros2_ws/src/franka_avoidance
 
 # Semester-Project-Avoiding [Thibaud]
-WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance/
+WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance/
 RUN git clone -b main --single-branch https://github.com/TicaGit/semester_project_LASA_trinca.git project_thibaud
-WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance/project_thibaud
+WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance/project_thibaud
 RUN python3 -m pip install --editable .
 # RUN python3 -m pip install -r requirements.txt
 
 # Semester-Project-Learning [Ekin]
-WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance/
+WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance/
 RUN git clone -b main --single-branch https://github.com/MerihEkin/epfl_semester_project_1.git project_ekin
-WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance/project_ekin
+WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance/project_ekin
 RUN python3 -m pip install --editable .
 
 # Install Robot description
 WORKDIR /home/${USER}/ros2_ws/src
 RUN git clone -b v0.1.0 --single-branch https://github.com/aica-technology/franka_panda_description.git
 
-WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
+WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance
 # Copy the local folder
-COPY --chown=${USER} src src
-COPY --chown=${USER} scripts scripts
 COPY --chown=${USER} examples examples
-COPY --chown=${USER} rviz rviz
+COPY --chown=${USER} config config
+COPY --chown=${USER} launch launch
+COPY --chown=${USER} resource resource
+COPY --chown=${USER} franka_avoidance franka_avoidance
+# COPY --chown=${USER} test test
 # COPY --chown=${USER} local 
 COPY --chown=${USER} requirements.txt requirements.txt
 COPY --chown=${USER} setup.py setup.py
-# COPY --chown=${USER} setup.cfg setup.cfg
+COPY --chown=${USER} package.xml package.xml
+COPY --chown=${USER} setup.cfg setup.cfg
 RUN python3 -m pip install -r requirements.txt
-RUN python3 -m pip install --editable .
+# RUN python3 -m pip install --editable .
 
-# Delete unnecessary files (somehow this doe now work ?!)
-RUN rm -f setup.py requirements.txt
+# Delete unnecessary files (somehow this does not work ?!)
+# RUN rm -f setup.py requirements.txt setup.cfg
 
 # Install ros2
-WORKDIR /home/${USER}/ros2_ws/src
+WORKDIR /home/${USER}/ros2_ws
 RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash; colcon build --symlink-install"
+RUN bash ~/ros2_ws/install/setup.bash
+
 
 # Enable rviz?!
 RUN sudo apt-get install -y libxcb-util1
@@ -105,7 +110,9 @@ ENV QT_DEBUG_PLUGINS=1
 # # Clean image
 # RUN sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*
 
-WORKDIR /home/${USER}/ros2_ws/src/franka_obstacle_avoidance
+#
+
+WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance
 ENTRYPOINT tmux
 # ENTRYPOINT tmux new "python3 ~/pybullet_zmq/bin/zmq-simulator" ';' split "bash"
 
