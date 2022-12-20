@@ -109,7 +109,7 @@ ENV QT_DEBUG_PLUGINS=1
 
 # Some rviz / robot publisher library ?
 RUN sudo apt install -y libxcursor-dev 
-
+RUN pip install pandas
 # # Clean image
 # RUN sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*
 

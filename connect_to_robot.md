@@ -24,9 +24,14 @@ cd ~/Documents/LASA/CITRIFIED/optitrack
 bash docker-run.sh
 ```
 4. Run whatever you need to (!)
+Source environment:
+``` sh
+source ~/.profile_lukas
+```
+
 Go to franka_obstacle_avoidance directory and run docker:
 ``` sh
-cd Code/lukas/franka_obstacle_avoidance
+cd ~/Code/lukas/franka_obstacle_avoidance
 bash docker-run.sh
 ```
 
@@ -57,7 +62,12 @@ firefox https://172.16.0.2/desk/
 3. Turn of switch
 
 ## Troubleshooting
+
 If the docker does not want to connect, try running following command on the host (in order to allow the ssh connections):
 ``` sh
 xhost +
 ```
+
+Robot does not turn on:
+> Try press and release of red button.
+> Otherwise ask maximeS

@@ -12,6 +12,9 @@ docker run \
 	   -v "$(pwd)"/config:/home/ros2/ros2_ws/src/franka_avoidance/config:rw \
 	   -v "$(pwd)"/examples:/home/ros2/ros2_ws/src/franka_avoidance/examples:rw \
 	   -v "$(pwd)"/franka_avoidance:/home/ros2/ros2_ws/src/franka_avoidance/franka_avoidance:rw \
+	   -v "$(pwd)"/../epfl_semester_project_1/examples:/home/ros2/ros2_ws/src/franka_avoidance/project_ekin/examples:rw \
+	   -v "$(pwd)"/../epfl_semester_project_1/src:/home/ros2/ros2_ws/src/franka_avoidance/project_ekin/src:rw \
+	   -v "$(pwd)"/../epfl_semester_project_1/shared_data:/home/ros2/ros2_ws/src/franka_avoidance/project_ekin/data:rw \
 		ros2_franka_avoidance
 
 # -v "$(pwd)"/../franka_obstacle_avoidance:/home/ros2/ros2_ws/src/franka_avoidance \

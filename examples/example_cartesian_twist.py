@@ -71,7 +71,7 @@ class TwistController(Node):
                 )
                 self.command.joint_state = state.joint_state
                 self.command.joint_state.set_torques(self.command_torques.get_torques())
-
+                breakpoint()
                 self.robot.send_command(self.command)
 
             self.rate.sleep()
