@@ -40,11 +40,11 @@ def generate_launch_description():
         parameters=[{"robot_description": robot_description_content}],
     )
 
-    joint_state_pub_node = Node(
-        package="joint_state_publisher_gui",
-        executable="joint_state_publisher_gui",
-        output="both",
-    )
+    # joint_state_pub_node = Node(
+    #     package="joint_state_publisher_gui",
+    #     executable="joint_state_publisher_gui",
+    #     output="both",
+    # )
 
     rviz_node = Node(
         package="rviz2",
@@ -53,18 +53,14 @@ def generate_launch_description():
         arguments=[
             "-d",
             PathJoinSubstitution(
-                [
-                    FindPackageShare("franka_obstacle_avoidance"),
-                    "config/franka_obstacle.rviz",
-                ]
+                [FindPackageShare("franka_panda_description"), "config/franka.rviz"]
             ),
         ],
         output="log",
     )
-
     nodes = [
         robot_state_pub_node,
-        joint_state_pub_node,
+        # joint_state_pub_node,
         rviz_node,
     ]
 

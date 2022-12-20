@@ -18,17 +18,15 @@ from dynamic_obstacle_avoidance.containers import ObstacleContainer
 
 class RvizHandler(Node):
     def __init__(self, obstacles: ObstacleContainer = None):
-        rclpy.init()
-
         super().__init__("obstacle_visualizer")
 
         self.publisher_ = self.create_publisher(
-            MarkerArray, "obstacle_visualization", 10
+            MarkerArray, "obstacle_visualization", 3
         )
 
         timer_period = 0.5  # seconds
         # self.timer = self.create_timer(timer_period, self.timer_callback)
-        self.ii = 0
+        # self.ii = 0
 
         self.base_frame = "map"
 

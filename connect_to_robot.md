@@ -27,12 +27,17 @@ Go to franka_obstacle_avoidance directory and run docker:
 ``` sh
 cd Code/lukas/franka_obstacle_avoidance
 bash docker-run.sh
-rviz2 rviz/franka_obstacle.rviz
+```
+
+In the docker-terminal run:
+Run lunch file:
+```sh
+ros2 launch launch/franka.launch.py
 ```
 
 Split the window (`CTRL+b "`) and switch windows (`CTRL+b o`):
 ```sh
-[run you commands]
+[run your commands]
 ````
 
 ## Turn the Robot Off

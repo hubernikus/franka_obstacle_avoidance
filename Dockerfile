@@ -107,10 +107,11 @@ RUN sudo apt-get install -y libxcb-util1
 RUN sudo apt-get install -y libqt5gui5
 ENV QT_DEBUG_PLUGINS=1
 
+# Some rviz / robot publisher library ?
+RUN sudo apt install -y libxcursor-dev 
+
 # # Clean image
 # RUN sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*
-
-#
 
 WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance
 ENTRYPOINT tmux
