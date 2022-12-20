@@ -28,7 +28,7 @@ class RvizHandler(Node):
         # self.timer = self.create_timer(timer_period, self.timer_callback)
         # self.ii = 0
 
-        self.base_frame = "map"
+        self.base_frame = "world"
 
         self.marker_array = MarkerArray()
 

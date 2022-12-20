@@ -11,6 +11,7 @@ docker run \
 	   -v "$(pwd)"/launch:/home/ros2/ros2_ws/src/franka_avoidance/launch:rw \
 	   -v "$(pwd)"/config:/home/ros2/ros2_ws/src/franka_avoidance/config:rw \
 	   -v "$(pwd)"/examples:/home/ros2/ros2_ws/src/franka_avoidance/examples:rw \
+	   -v "$(pwd)"/franka_avoidance:/home/ros2/ros2_ws/src/franka_avoidance/franka_avoidance:rw \
 		ros2_franka_avoidance
 
 # -v "$(pwd)"/../franka_obstacle_avoidance:/home/ros2/ros2_ws/src/franka_avoidance \

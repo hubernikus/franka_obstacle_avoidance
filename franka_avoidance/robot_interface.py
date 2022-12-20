@@ -2,10 +2,8 @@ import zmq
 
 from network_interfaces.zmq import network
 
-import rclpy
 from rclpy.node import Node
-
-from sesnsor_msgs.msg import JointState
+from sensor_msgs.msg import JointState
 
 
 class RobotZmqInterface(Node):
@@ -13,9 +11,12 @@ class RobotZmqInterface(Node):
     This interface additionally published the states (for rviz).
     """
 
-    def __init__(self, state_uri, command_uri):
-        super().__init__("obstacle_visualizer")
-        self.publisher_ = self.create_publisher(JointState, "joint_states", 3)
+    def __init__(self, state_uri, command_uri, do_ros_publish: bool = True):
+        self.do_ros_publish = do_ros_publish
+        if self.do_ros_publish:
+            print(f"Creating ZMQ Node")
+            super().__init__("robot_zmq_interface")
+            self.publisher_ = self.create_publisher(JointState, "joint_states", 3)
 
         self.__context = zmq.Context(1)
         self.__subscriber = network.configure_subscriber(
@@ -31,18 +32,26 @@ class RobotZmqInterface(Node):
 
     def get_state(self):
         # Store states internally to publish via ROS2
-        self.ros2_run_publisher()
-        return network.receive_state(self.__subscriber)
+        state = network.receive_state(self.__subscriber)
+        if state is None:
+            print("RobotZMQ: No state recieved.")
+            return
+
+        if self.do_ros_publish:
+            self.ros2_run_publisher(state)
+        return state
 
     def send_command(self, command: network.CommandMessage()):
         network.send_command(command, self.__publisher)
 
-    def ros2_run_publisher(self):
+    def ros2_run_publisher(self, state):
         msg = JointState()
         msg.header.frame_id = self.base_frame
-        msg.header.frame_id = self.get_clock().now().to_msg()
+        msg.header.stamp = self.get_clock().now().to_msg()
 
-        msg.name = self.robot_name
+        msg.name = state.joint_state.get_names()
+        msg.position = state.joint_state.get_positions().tolist()
+        msg.velocity = state.joint_state.get_velocities().tolist()
+        msg.effort = state.joint_state.get_torques().tolist()
 
-        msg.position = 
         self.publisher_.publish(msg)

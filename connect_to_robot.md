@@ -4,6 +4,7 @@ The instructions how to connect to the robot are described bellow.
 1. Turn on robot [franka]
 
 2. Turn on web-interface
+https://172.16.0.2/desk/
 ```
 firefox https://172.16.0.2/desk/
 ```
@@ -39,6 +40,11 @@ Split the window (`CTRL+b "`) and switch windows (`CTRL+b o`):
 ```sh
 [run your commands]
 ````
+
+e.g.
+```sh
+python examples/example_optitrack_rviz.py
+```
 
 ## Turn the Robot Off
 1. Make sure 'emergency lock' is on
