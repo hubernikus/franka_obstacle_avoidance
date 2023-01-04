@@ -17,52 +17,44 @@ from franka_avoidance.robot_interface import RobotZmqInterface as RobotInterface
 
 
 class JointSpaceController(Node):
-    def __init__(self, robot, freq: float = 100, node_name="joint_controller"):
+    def __init__(self, robot, freq: float = 100, node_name="velocity_controller"):
         super().__init__(node_name)
         self.robot = robot
         self.rate = self.create_rate(freq)
 
         self.ds = create_cartesian_ds(DYNAMICAL_SYSTEM_TYPE.POINT_ATTRACTOR)
         self.ds.set_parameter_value(
-            "gain", [50.0, 50.0, 50.0, 10.0, 10.0, 10.0], sr.ParameterType.DOUBLE_ARRAY
+            "gain", [20.0, 20.0, 50.0, 10.0, 10.0, 10.0], sr.ParameterType.DOUBLE_ARRAY
         )
 
     def run(self):
         target_set = False
 
-        while rclpy.ok():
-            self.command = CommandMessage()
-            self.command.control_type = [ControlType.VELOCITY.value]
+        command = CommandMessage()
+        command.control_type = [ControlType.VELOCITY.value]
 
+        while rclpy.ok():
             state = self.robot.get_state()
+
             if not state:
+                # self.rate.sleep()
                 continue
+
             if not target_set:
-                target = sr.CartesianPose(
-                    state.ee_state.get_name(),
-                    np.array([0.6, 0.3, 0.5]),
-                    np.array([0.0, 1.0, 0.0, 0.0]),
-                    state.ee_state.get_reference_frame(),
-                )
-                self.ds.set_parameter_value(
-                    "attractor",
-                    target,
-                    sr.ParameterType.STATE,
-                    sr.StateType.CARTESIAN_POSE,
-                )
+                target = sr.CartesianPose(state.ee_state.get_name(), np.array([.6, .3, .5]), np.array([0., 1., 0., 0.]),
+                                          state.ee_state.get_reference_frame())
+                self.ds.set_parameter_value("attractor", target, sr.ParameterType.STATE, sr.StateType.CARTESIAN_POSE)
                 target_set = True
-            else:
-                twist = sr.CartesianTwist(self.ds.evaluate(state.ee_state))
-                twist.clamp(0.1, 0.3)
-                # print('tor', self.command.joint_state.get_torques())
-                self.command.joint_state = state.joint_state
-                self.command.joint_state.set_velocities(
-                    np.linalg.lstsq(state.jacobian.data(), twist.get_twist())[0]
-                )
-                self.robot.send_command(self.command)
-                # print('vel', self.command.joint_state.get_velocities())
-                print('tor', self.command.joint_state.get_torques())
-                self.rate.sleep()
+                continue
+
+            twist = sr.CartesianTwist(self.ds.evaluate(state.ee_state))
+            twist.clamp(.25, .5)
+
+            command.joint_state = state.joint_state
+            command.joint_state.set_velocities(np.linalg.lstsq(state.jacobian.data(), twist.get_twist())[0])
+            self.robot.send_command(command)
+
+            self.rate.sleep()
 
 
 if __name__ == "__main__":
