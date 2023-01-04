@@ -22,9 +22,6 @@ class TwistController(Node):
         self.robot = robot
         self.rate = self.create_rate(freq)
 
-        self.command = CommandMessage()
-        self.command.control_type = [ControlType.EFFORT.value]
-
         self.ds = create_cartesian_ds(DYNAMICAL_SYSTEM_TYPE.POINT_ATTRACTOR)
         self.ds.set_parameter_value(
             "gain", [50.0, 50.0, 50.0, 10.0, 10.0, 10.0], sr.ParameterType.DOUBLE_ARRAY
@@ -46,6 +43,9 @@ class TwistController(Node):
         target_set = False
 
         while rclpy.ok():
+            self.command = CommandMessage()
+            self.command.control_type = [ControlType.EFFORT.value]
+
             state = self.robot.get_state()
             if not state:
                 continue
