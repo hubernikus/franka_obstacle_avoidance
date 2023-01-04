@@ -22,9 +22,6 @@ class JointSpaceController(Node):
         self.robot = robot
         self.rate = self.create_rate(freq)
 
-        self.command = CommandMessage()
-        self.command.control_type = [ControlType.VELOCITY.value]
-
         self.ds = create_cartesian_ds(DYNAMICAL_SYSTEM_TYPE.POINT_ATTRACTOR)
         self.ds.set_parameter_value(
             "gain", [50.0, 50.0, 50.0, 10.0, 10.0, 10.0], sr.ParameterType.DOUBLE_ARRAY
@@ -34,13 +31,16 @@ class JointSpaceController(Node):
         target_set = False
 
         while rclpy.ok():
+            self.command = CommandMessage()
+            self.command.control_type = [ControlType.VELOCITY.value]
+
             state = self.robot.get_state()
             if not state:
                 continue
             if not target_set:
                 target = sr.CartesianPose(
                     state.ee_state.get_name(),
-                    np.array([0.6, -0.3, 0.5]),
+                    np.array([0.6, 0.3, 0.5]),
                     np.array([0.0, 1.0, 0.0, 0.0]),
                     state.ee_state.get_reference_frame(),
                 )
@@ -53,12 +53,15 @@ class JointSpaceController(Node):
                 target_set = True
             else:
                 twist = sr.CartesianTwist(self.ds.evaluate(state.ee_state))
-                twist.clamp(0.25, 0.5)
+                twist.clamp(0.1, 0.3)
+                # print('tor', self.command.joint_state.get_torques())
                 self.command.joint_state = state.joint_state
                 self.command.joint_state.set_velocities(
                     np.linalg.lstsq(state.jacobian.data(), twist.get_twist())[0]
                 )
                 self.robot.send_command(self.command)
+                # print('vel', self.command.joint_state.get_velocities())
+                print('tor', self.command.joint_state.get_torques())
                 self.rate.sleep()
 
 

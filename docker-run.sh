@@ -15,6 +15,8 @@ docker run \
 	   -v "$(pwd)"/../epfl_semester_project_1/examples:/home/ros2/ros2_ws/src/franka_avoidance/project_ekin/examples:rw \
 	   -v "$(pwd)"/../epfl_semester_project_1/src:/home/ros2/ros2_ws/src/franka_avoidance/project_ekin/src:rw \
 	   -v "$(pwd)"/../epfl_semester_project_1/shared_data:/home/ros2/ros2_ws/src/franka_avoidance/project_ekin/data:rw \
+	   -v "$(pwd)"/../semester_project_LASA_trinca/docker_scripts:/home/ros2/ros2_ws/src/franka_avoidance/project_thibaud/docker_scripts:rw \
+	   -v "$(pwd)"/../semester_project_LASA_trinca/librairies:/home/ros2/ros2_ws/src/franka_avoidance/project_thibaud/librairies:rw \
 		ros2_franka_avoidance
 
 # -v "$(pwd)"/../franka_obstacle_avoidance:/home/ros2/ros2_ws/src/franka_avoidance \

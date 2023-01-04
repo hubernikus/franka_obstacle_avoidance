@@ -49,10 +49,11 @@ class TwistController(Node):
             state = self.robot.get_state()
             if not state:
                 continue
+
             if not target_set:
                 target = sr.CartesianPose(
                     state.ee_state.get_name(),
-                    np.array([0.3, 0.4, 0.5]),
+                    np.array([0.3, -1.0, 1.0]),
                     np.array([0.0, 1.0, 0.0, 0.0]),
                     state.ee_state.get_reference_frame(),
                 )
@@ -71,8 +72,8 @@ class TwistController(Node):
                 )
                 self.command.joint_state = state.joint_state
                 self.command.joint_state.set_torques(self.command_torques.get_torques())
-                breakpoint()
                 self.robot.send_command(self.command)
+                print('tor', self.command.joint_state.get_torques())
 
             self.rate.sleep()
 

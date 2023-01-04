@@ -8,8 +8,10 @@ https://172.16.0.2/desk/
 ```
 firefox https://172.16.0.2/desk/
 ```
+username : frankafranka
 PW: frankafranka
 Click the 'unlock' button (middle-right)
+make sure light is white, otherwise press black button 
 
 3. Run franka lightweight docker.
 ```sh
@@ -23,7 +25,7 @@ franka_lightweight_interface 16 panda_ --sensitivity low --joint-damping off
 cd ~/Documents/LASA/CITRIFIED/optitrack
 bash docker-run.sh
 ```
-4. Run whatever you need to (!)
+4. 
 Source environment:
 ``` sh
 source ~/.profile_lukas
@@ -70,4 +72,19 @@ xhost +
 
 Robot does not turn on:
 > Try press and release of red button.
-> Otherwise ask maximeS
+> Unplug / replug the robot
+> Try again
+> (Otherwise ask maxime)
+
+
+
+# Idle Mode
+Terminal 1
+cd ~/Documents/LASA/learning-user-safety
+aica-docker interactive learning-safety-margin:noetic -u ros --net host --no-hostname -v data_vol:/home/ros/ros_ws/src/learning_safety_margin/data
+roslaunch learning_safety_margin demo.launch demo:=idle_control
+
+Terminal 2
+cd ~/Documents/LASA/franka-lightweight-interface
+bash run-rt.sh 
+franka_lightweight_interface 16 panda_ --sensitivity low --joint-damping off
