@@ -57,19 +57,21 @@ class OptitrackInterface(Node):
         self.socket.bind(tcp_socket)
         self.socket.setsockopt(zmq.SUBSCRIBE, b"")
 
+        self.robot_body = None
+
         # Avoid infinite wait
         # self.socket.setsockopt(zmq.LINGER, 0)
 
     def get_messages(self) -> list[RigidBody]:
-        print("[optitrack_interface] Collecting optitrack-data from zmq-server...")
+        # print("[optitrack_interface] Collecting optitrack-data from zmq-server...")
         binary_data = self.socket.recv()
 
         bodies = []
         n_bodies = int(len(binary_data) / self.msg_length)
 
         for ii in range(n_bodies):
-            print(f"n bodies {n_bodies}")
-            subdata = binary_data[ii * self.msg_length : (ii + 1) * self.msg_length]
+            # print(f"n bodies {n_bodies}")
+            subdata = binary_data[ii * self.msg_length: (ii + 1) * self.msg_length]
 
             body_array = np.array(struct.unpack(self.msg_structure, subdata))
             obs_id = body_array[0]
@@ -79,10 +81,13 @@ class OptitrackInterface(Node):
             )
 
             if obs_id == self.robot_id:
+                # print("got robot.")
                 self.publish_roboot_transform(position, rotation)
+
+                self.robot_body = RigidBody(self.robot_id, position, rotation)
                 continue
 
-            print(f"Updating body: {obs_id}")
+            # print(f"Updating body: {obs_id}")
 
             bodies.append(RigidBody(obs_id, position, rotation))
 

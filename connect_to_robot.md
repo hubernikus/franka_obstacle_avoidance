@@ -59,8 +59,9 @@ python examples/example_optitrack_rviz.py
 ```
 firefox https://172.16.0.2/desk/
 ```
-> Lock robot (center-right)
-> Go to menu (top right) > shutdown robot
+> Lock robot (center-right)  
+> Go to menu (top right) > shutdown robot  
+
 3. Turn of switch
 
 ## Troubleshooting
@@ -71,10 +72,10 @@ xhost +
 ```
 
 Robot does not turn on:
-> Try press and release of red button.
-> Unplug / replug the robot
-> Try again
-> (Otherwise ask maxime)
+> Try press and release of red button.   
+> Unplug / replug the robot  
+> Try again  
+> (Otherwise ask maxime  
 
 
 

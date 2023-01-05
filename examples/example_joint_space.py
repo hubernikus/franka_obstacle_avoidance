@@ -17,44 +17,47 @@ from franka_avoidance.robot_interface import RobotZmqInterface as RobotInterface
 
 
 class JointSpaceController(Node):
-    def __init__(self, robot, freq: float = 100, node_name="velocity_controller"):
+    def __init__(self, robot: RobotInterface, freq: float = 100, node_name: str = "velocity_controller", target: sr.CartesianPose = None) -> None:
         super().__init__(node_name)
         self.robot = robot
         self.rate = self.create_rate(freq)
+        period = 1. / freq
 
         self.ds = create_cartesian_ds(DYNAMICAL_SYSTEM_TYPE.POINT_ATTRACTOR)
         self.ds.set_parameter_value(
             "gain", [20.0, 20.0, 50.0, 10.0, 10.0, 10.0], sr.ParameterType.DOUBLE_ARRAY
         )
 
-    def run(self):
-        target_set = False
+        # Get robot state to set up the target in the same frame
+        while not (state := self.robot.get_state()) and rclpy.ok():
+            print("Awaiting first state.")
 
-        command = CommandMessage()
-        command.control_type = [ControlType.VELOCITY.value]
+        print("36")
+        if target is None:
+            target = sr.CartesianPose(state.ee_state.get_name(), np.array([0.6, -0.3, 0.5]), np.array([0., 1., 0., 0.]),
+                                      state.ee_state.get_reference_frame())
 
-        while rclpy.ok():
-            state = self.robot.get_state()
+        self.ds.set_parameter_value("attractor", target, sr.ParameterType.STATE, sr.StateType.CARTESIAN_POSE)
 
-            if not state:
-                # self.rate.sleep()
-                continue
+        self.timer = self.create_timer(period, self.controller_callback)
 
-            if not target_set:
-                target = sr.CartesianPose(state.ee_state.get_name(), np.array([.6, .3, .5]), np.array([0., 1., 0., 0.]),
-                                          state.ee_state.get_reference_frame())
-                self.ds.set_parameter_value("attractor", target, sr.ParameterType.STATE, sr.StateType.CARTESIAN_POSE)
-                target_set = True
-                continue
+        # Command message type which will be passed to robot
+        self.command = CommandMessage()
+        self.command.control_type = [ControlType.VELOCITY.value]
 
-            twist = sr.CartesianTwist(self.ds.evaluate(state.ee_state))
-            twist.clamp(.25, .5)
+    def controller_callback(self) -> None:
+        state = self.robot.get_state()
 
-            command.joint_state = state.joint_state
-            command.joint_state.set_velocities(np.linalg.lstsq(state.jacobian.data(), twist.get_twist())[0])
-            self.robot.send_command(command)
+        if not state:
+            # self.rate.sleep()
+            return
 
-            self.rate.sleep()
+        twist = sr.CartesianTwist(self.ds.evaluate(state.ee_state))
+        twist.clamp(.25, .5)
+
+        self.command.joint_state = state.joint_state
+        self.command.joint_state.set_velocities(np.linalg.lstsq(state.jacobian.data(), twist.get_twist())[0])
+        self.robot.send_command(self.command)
 
 
 if __name__ == "__main__":
@@ -66,14 +69,14 @@ if __name__ == "__main__":
     # Spin in a separate thread
     controller = JointSpaceController(robot=robot_interface, freq=500)
 
-    thread = threading.Thread(target=rclpy.spin, args=(controller,), daemon=True)
-    thread.start()
-
     try:
-        controller.run()
-
+        # thread = threading.Thread(target=rclpy.spin, args=(controller,), daemon=True)
+        # thread.start()
+        rclpy.spin(controller)
     except KeyboardInterrupt:
         pass
 
+    controller.destroy_node()
+
     rclpy.shutdown()
-    thread.join()
+    # thread.join()

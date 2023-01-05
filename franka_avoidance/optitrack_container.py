@@ -12,6 +12,7 @@ from rclpy.node import Node
 
 import numpy as np
 
+
 from vartools.states import ObjectPose
 
 from dynamic_obstacle_avoidance.obstacles import Obstacle
@@ -57,12 +58,12 @@ class OptitrackContainer(ObstacleContainer):
 
     def update(self):
         """Update positions based on optitrack."""
+        if self.optitrack_interface is not None:
+            self.update_from_optitrack()
+
         if self.visualization_handler is not None:
             obstacle_ids = np.arange(len(self))
             self.visualization_handler.update(self, obstacle_ids)
-
-        if self.optitrack_interface is not None:
-            self.update_from_optitrack()
 
     def append(
         self,
@@ -115,8 +116,22 @@ class OptitrackContainer(ObstacleContainer):
                 * self.obstacle_offsets[idx].orientation
             )
 
-            self[idx].linear_velocity = self.position_filters[idx].velocity
-            self[idx].angular_velocity = self.orientation_filters[idx].angular_velocity
+            # TODO: update velocity
+
+            # Move into robot frame
+            if self.optitrack_interface.robot_body is not None:
+                # TODO: verify that this is really correct....
+                print("Updating with respect to robot.")
+                self[idx].pose.rotation = self[idx].pose.orientation * self.optitrack_interface.robot_body.rotation.inv()
+                # self[idx].pose.position = self.optitrack_interface.robot_body.rotation.inv().apply(self[idx].pose.position) + \
+                self[idx].pose.position = self.optitrack_interface.robot_body.rotation.apply(self[idx].pose.position) + \
+                    self.optitrack_interface.robot_body.position
+
+                self[idx].linear_velocity = self.optitrack_interface.robot_body.rotation.apply(self.position_filters[idx].velocity)
+
+                self.visualization_handler.base_frame = "panda_link0"
+
+                # TODO: update velocity to frame of reference
 
             print("Obstacle", np.round(self[idx].linear_velocity, 3))
 

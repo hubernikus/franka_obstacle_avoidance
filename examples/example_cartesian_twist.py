@@ -18,7 +18,7 @@ from franka_avoidance.robot_interface import RobotZmqInterface as RobotInterface
 
 
 class CartesianSpaceController(Node):
-    def __init__(self, robot, freq: float = 100, node_name="velocity_controller"):
+    def __init__(self, robot, freq: float = 100, node_name="velocity_controller", is_simulation: bool = True):
         super().__init__(node_name)
         self.robot = robot
         self.rate = self.create_rate(freq)
@@ -29,10 +29,16 @@ class CartesianSpaceController(Node):
         )
 
         self.ctrl = create_cartesian_controller(CONTROLLER_TYPE.COMPLIANT_TWIST)
-        self.ctrl.set_parameter_value("linear_principle_damping", 1., sr.ParameterType.DOUBLE)
-        self.ctrl.set_parameter_value("linear_orthogonal_damping", 1., sr.ParameterType.DOUBLE)
-        self.ctrl.set_parameter_value("angular_stiffness", .5, sr.ParameterType.DOUBLE)
-        self.ctrl.set_parameter_value("angular_damping", .5, sr.ParameterType.DOUBLE)
+        if is_simulation:
+            self.ctrl.set_parameter_value("linear_principle_damping", 1., sr.ParameterType.DOUBLE)
+            self.ctrl.set_parameter_value("linear_orthogonal_damping", 1., sr.ParameterType.DOUBLE)
+            self.ctrl.set_parameter_value("angular_stiffness", .5, sr.ParameterType.DOUBLE)
+            self.ctrl.set_parameter_value("angular_damping", .5, sr.ParameterType.DOUBLE)
+        else:
+            self.ctrl.set_parameter_value("linear_principle_damping", 50., sr.ParameterType.DOUBLE)
+            self.ctrl.set_parameter_value("linear_orthogonal_damping", 50., sr.ParameterType.DOUBLE)
+            self.ctrl.set_parameter_value("angular_stiffness", 2., sr.ParameterType.DOUBLE)
+            self.ctrl.set_parameter_value("angular_damping", 2., sr.ParameterType.DOUBLE)
 
     def run(self):
         target_set = False
@@ -64,14 +70,13 @@ class CartesianSpaceController(Node):
 
             twist = sr.CartesianTwist(self.ds.evaluate(state.ee_state))
             twist.clamp(.25, .5)
+            print(twist)
 
             command_torques = sr.JointTorques(self.ctrl.compute_command(twist, state.ee_state, state.jacobian))
             command.joint_state = state.joint_state
             command.joint_state.set_torques(command_torques.get_torques())
-            print(command.joint_state.get_torques())
 
             self.robot.send_command(command)
-            print("Command send.")
             self.rate.sleep()
 
 
@@ -82,7 +87,7 @@ if __name__ == "__main__":
     robot_interface = RobotInterface("*:1601", "*:1602")
 
     # Spin in a separate thread
-    controller = CartesianSpaceController(robot=robot_interface, freq=100)
+    controller = CartesianSpaceController(robot=robot_interface, freq=100, is_simulation=False)
 
     thread = threading.Thread(target=rclpy.spin, args=(controller,), daemon=True)
     thread.start()
