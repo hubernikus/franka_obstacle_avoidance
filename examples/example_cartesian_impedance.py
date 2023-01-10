@@ -27,6 +27,7 @@ class CartesianSpaceController(Node):
         super().__init__(node_name)
         self.robot = robot
         self.rate = self.create_rate(freq)
+        period = 1. / freq
 
         self.ctrl = create_cartesian_controller(CONTROLLER_TYPE.COMPLIANT_TWIST)
         if is_simulation:
@@ -87,6 +88,8 @@ class CartesianSpaceController(Node):
             sr.StateType.CARTESIAN_POSE,
         )
 
+        self.timer = self.create_timer(period, self.controller_callback)
+
     def run(self):
         while rclpy.ok():
             self.controller_callback()
@@ -96,7 +99,7 @@ class CartesianSpaceController(Node):
         twist.clamp(self.clamp_linear, self.clamp_angular)
 
         print()
-        print("delta state - cmpl twist: \n", state.ee_state - twist)
+        print("delta state - cmpl twist: \m", state.ee_state - twist)
         print()
 
         return self.ctrl.compute_command(
@@ -222,7 +225,9 @@ class CartesianSpaceController(Node):
         command.control_type = [ControlType.EFFORT.value]
 
         state = self.robot.get_state()
+
         if not state:
+            print("Waiting for a state.")
             self.rate.sleep()
             return
 
@@ -252,10 +257,12 @@ class CartesianSpaceController(Node):
 
         command.joint_state = state.joint_state
         command.joint_state.set_torques(command_torques.get_torques())
-
+        breakpoint()
         # self.robot.send_command(command)
-        print("Send another one.")
+
+        # print("Done --- I'm out for a bit....")
         self.rate.sleep()
+        # print("Had the nap.")
 
 
 if __name__ == "__main__":
@@ -268,14 +275,17 @@ if __name__ == "__main__":
     controller = CartesianSpaceController(
         robot=robot_interface, freq=100, is_simulation=False)
 
-    thread = threading.Thread(target=rclpy.spin, args=(controller,), daemon=True)
-    thread.start()
+    # thread = threading.Thread(target=rclpy.spin, args=(controller,), daemon=True)
+    # thread.start()
 
     try:
-        controller.run()
+        # controller.run()
+        rclpy.spin(controller)
 
     except KeyboardInterrupt:
         pass
 
+    controller.destroy_node()
+
     rclpy.shutdown()
-    thread.join()
+    # thread.join()
