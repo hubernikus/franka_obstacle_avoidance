@@ -43,7 +43,7 @@ Run lunch file:
 ros2 launch launch/franka.launch.py
 ```
 
-Split the window (`CTRL+b "`) and switch windows (`CTRL+b o`):
+Split the window (`CTRL+b "`: horizontal / `CTRL+b %`: vertical) and switch windows (`CTRL+b o`) / (`CTRL+b [ARROW KEY]`). 
 ```sh
 [run your commands]
 ````
@@ -77,6 +77,12 @@ Robot does not turn on:
 > Try again  
 > (Otherwise ask maxime  
 
+
+## Run and recompile robot:
+Make sure the control library is copied to `/home/ros/control_libraries` in the `docker-run.sh`. Recompile with:
+``` bash
+sudo ./control-libraries/source/install.sh -y && sudo pip3 install ./control-libraries/python
+```
 
 
 # Idle Mode
