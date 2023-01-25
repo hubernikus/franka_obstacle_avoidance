@@ -71,7 +71,7 @@ class OptitrackInterface(Node):
 
         for ii in range(n_bodies):
             # print(f"n bodies {n_bodies}")
-            subdata = binary_data[ii * self.msg_length: (ii + 1) * self.msg_length]
+            subdata = binary_data[ii * self.msg_length : (ii + 1) * self.msg_length]
 
             body_array = np.array(struct.unpack(self.msg_structure, subdata))
             obs_id = body_array[0]

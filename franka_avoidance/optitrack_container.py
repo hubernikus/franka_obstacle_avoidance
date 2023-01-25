@@ -122,12 +122,23 @@ class OptitrackContainer(ObstacleContainer):
             if self.optitrack_interface.robot_body is not None:
                 # TODO: verify that this is really correct....
                 print("Updating with respect to robot.")
-                self[idx].pose.rotation = self[idx].pose.orientation * self.optitrack_interface.robot_body.rotation.inv()
+                self[idx].pose.rotation = (
+                    self[idx].pose.orientation
+                    * self.optitrack_interface.robot_body.rotation.inv()
+                )
                 # self[idx].pose.position = self.optitrack_interface.robot_body.rotation.inv().apply(self[idx].pose.position) + \
-                self[idx].pose.position = self.optitrack_interface.robot_body.rotation.apply(self[idx].pose.position) + \
-                    self.optitrack_interface.robot_body.position
+                self[idx].pose.position = (
+                    self.optitrack_interface.robot_body.rotation.apply(
+                        self[idx].pose.position
+                    )
+                    + self.optitrack_interface.robot_body.position
+                )
 
-                self[idx].linear_velocity = self.optitrack_interface.robot_body.rotation.apply(self.position_filters[idx].velocity)
+                self[
+                    idx
+                ].linear_velocity = self.optitrack_interface.robot_body.rotation.apply(
+                    self.position_filters[idx].velocity
+                )
 
                 self.visualization_handler.base_frame = "panda_link0"
 
