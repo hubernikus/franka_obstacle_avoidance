@@ -36,7 +36,7 @@ class JointSpaceController(Node):
         if target is None:
             target = sr.CartesianPose(
                 state.ee_state.get_name(),
-                np.array([0.6, -0.3, 0.5]),
+                np.array([0.6, 0.3, 0.5]),
                 np.array([0.0, 1.0, 0.0, 0.0]),
                 state.ee_state.get_reference_frame(),
             )
@@ -62,11 +62,11 @@ class JointSpaceController(Node):
             return
 
         twist = sr.CartesianTwist(self.ds.evaluate(state.ee_state))
-        twist.clamp(0.25, 0.5)
+        twist.clamp(0.25, 1.0)
 
         self.command.joint_state = state.joint_state
         self.command.joint_state.set_velocities(
-            np.linalg.lstsq(state.jacobian.data(), twist.get_twist())[0]
+            np.linalg.lstsq(state.jacobian.data(), twist.get_twist(), rcond=None)[0]
         )
         self.robot.send_command(self.command)
 

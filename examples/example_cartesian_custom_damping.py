@@ -127,7 +127,7 @@ class CartesianSpaceController(Node):
 
     def update_dissipative_controller(self, desired_twist: sr.CartesianTwist) -> None:
         linear_velocity = desired_twist.get_linear_velocity()
-        if not (lin_norm := LA.norm(linear_velocity)):
+        if not (lin_norm := np.linalg.norm(linear_velocity)):
             D = np.diag(
                 [
                     self.linear_orthogonal_damping,
@@ -143,7 +143,7 @@ class CartesianSpaceController(Node):
             )
             return
 
-        D = np.zeros(6)
+        D = np.zeros((6, 6))
 
         # Angular damping
         D[3:, 3:] = np.eye(3) * self.angular_damping
@@ -167,6 +167,7 @@ class CartesianSpaceController(Node):
         state = self.robot.get_state()
         if not state:
             return
+
         # !!!Current force / torque are eliminated in order to not 'overcompensate'
         state.ee_state.set_force(np.zeros(3))
         state.ee_state.set_torque(np.zeros(3))
@@ -177,12 +178,13 @@ class CartesianSpaceController(Node):
         # Update Damping-matrix based on desired velocity
         self.update_dissipative_controller(desired_twist)
 
-        cmnd_dissipative = ctrl_dissipative.compute_command(
+        cmnd_dissipative = self.ctrl_dissipative.compute_command(
             desired_twist, state.ee_state, state.jacobian
         )
 
         # command_torques = sr.JointTorques(cmnd_dissipative)
-        command.joint_state = state.joint_state  # ?
+
+        command.joint_state = state.joint_state
         command.joint_state.set_torques(cmnd_dissipative.get_torques())
         self.robot.send_command(command)
 
@@ -192,7 +194,7 @@ if (__name__) == "__main__":
     rclpy.init()
     robot_interface = RobotInterface("*:1601", "*:1602")
 
-    controller = CarteisanDissipativeController(
+    controller = CartesianSpaceController(
         robot=robot_interface, freq=100, is_simulation=False
     )
 

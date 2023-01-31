@@ -39,6 +39,8 @@ RUN rm -rd lib
 # Install needed (local) python packages
 RUN mkdir ${HOME}/python
 
+RUN echo 1
+
 # Dynamic Obstacle Avoidance Library [Only minor changes]
 WORKDIR ${HOME}/python
 RUN git clone -b main --single-branch https://github.com/epfl-lasa/dynamic_obstacle_avoidance
@@ -68,10 +70,10 @@ RUN python3 -m pip install --editable .
 # RUN python3 -m pip install -r requirements.txt
 
 # Semester-Project-Learning [Ekin]
-WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance/
-RUN git clone -b main --single-branch https://github.com/MerihEkin/epfl_semester_project_1.git project_ekin
-WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance/project_ekin
-RUN python3 -m pip install --editable .
+# WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance/
+# RUN git clone -b main --single-branch https://github.com/MerihEkin/epfl_semester_project_1.git project_ekin
+# WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance/project_ekin
+# RUN python3 -m pip install --editable .
 
 # Install Robot description
 WORKDIR /home/${USER}/ros2_ws/src
@@ -101,7 +103,6 @@ WORKDIR /home/${USER}/ros2_ws
 RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash; colcon build --symlink-install"
 RUN bash ~/ros2_ws/install/setup.bash
 
-
 # Enable rviz?!
 RUN sudo apt-get install -y libxcb-util1
 RUN sudo apt-get install -y libqt5gui5
@@ -109,7 +110,11 @@ ENV QT_DEBUG_PLUGINS=1
 
 # Some rviz / robot publisher library ?
 RUN sudo apt install -y libxcursor-dev 
-RUN pip install pandas
+
+# why pandas ?!
+RUN pip install pandas  
+
+
 # # Clean image
 # RUN sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*
 
