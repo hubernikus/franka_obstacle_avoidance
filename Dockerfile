@@ -39,7 +39,12 @@ RUN rm -rd lib
 # Install needed (local) python packages
 RUN mkdir ${HOME}/python
 
-RUN echo 1
+# Various tool
+WORKDIR ${HOME}/python
+RUN git clone -b main --single-branch https://github.com/hubernikus/various_tools.git
+WORKDIR ${HOME}/python/various_tools
+RUN python3 -m pip install -r requirements.txt
+RUN python3 -m pip install --editable .
 
 # Dynamic Obstacle Avoidance Library [Only minor changes]
 WORKDIR ${HOME}/python
@@ -48,10 +53,10 @@ WORKDIR ${HOME}/python/dynamic_obstacle_avoidance
 RUN python3 -m pip install -r requirements.txt
 RUN python3 -m pip install --editable .
 
-# Various tool
+# Dynamic Obstacle Avoidance Library [Only minor changes]
 WORKDIR ${HOME}/python
-RUN git clone -b main --single-branch https://github.com/hubernikus/various_tools.git
-WORKDIR ${HOME}/python/various_tools
+RUN git clone -b main --single-branch https://github.com/hubernikus/nonlinear_obstacle_avoidance
+WORKDIR ${HOME}/python/nonlinear_obstacle_avoidance
 RUN python3 -m pip install -r requirements.txt
 RUN python3 -m pip install --editable .
 
@@ -69,13 +74,7 @@ WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance/project_thibaud
 RUN python3 -m pip install --editable .
 # RUN python3 -m pip install -r requirements.txt
 
-# Semester-Project-Learning [Ekin]
-# WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance/
-# RUN git clone -b main --single-branch https://github.com/MerihEkin/epfl_semester_project_1.git project_ekin
-# WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance/project_ekin
-# RUN python3 -m pip install --editable .
 
-# Install Robot description
 WORKDIR /home/${USER}/ros2_ws/src
 RUN git clone -b v0.1.0 --single-branch https://github.com/aica-technology/franka_panda_description.git
 
