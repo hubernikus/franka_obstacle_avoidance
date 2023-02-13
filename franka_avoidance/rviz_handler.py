@@ -1,6 +1,8 @@
 """
 Run the obstacles with following library.
 """
+from typing import Optional
+
 import numpy as np
 
 import rclpy
@@ -17,7 +19,9 @@ from dynamic_obstacle_avoidance.containers import ObstacleContainer
 
 
 class RvizHandler(Node):
-    def __init__(self, obstacles: ObstacleContainer = None):
+    def __init__(
+        self, obstacles: Optional[ObstacleContainer] = None, base_frame: str = "world"
+    ):
         super().__init__("obstacle_visualizer")
 
         self.publisher_ = self.create_publisher(
@@ -28,7 +32,7 @@ class RvizHandler(Node):
         # self.timer = self.create_timer(timer_period, self.timer_callback)
         # self.ii = 0
 
-        self.base_frame = "world"
+        self.base_frame = base_frame
 
         self.marker_array = MarkerArray()
 
@@ -62,7 +66,12 @@ class RvizHandler(Node):
 
         return marker
 
-    def update(self, obstacles: list[Obstacle], obstacle_ids: list) -> None:
+    def update(
+        self, obstacles: list[Obstacle], obstacle_ids: Optional[list] = None
+    ) -> None:
+        if obstacle_ids is None:
+            obstacle_ids = np.arange(len(obstacles))
+
         # print("Doing rviz handle.")
         existing_ids = np.array([marker.id for marker in self.marker_array.markers])
 

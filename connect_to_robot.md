@@ -22,9 +22,11 @@ franka_lightweight_interface 16 panda_ --sensitivity low --joint-damping off
 
 4. Run Optitrack
 ``` sh
-cd ~/Documents/LASA/CITRIFIED/optitrack
+cd ~/Code/Lukas/CITRIFIED/optitrack
 bash docker-run.sh
 ```
+# Sanity check: 1 obstacle == 36 bytes
+
 4. 
 Source environment:
 ``` sh
