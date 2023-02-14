@@ -189,6 +189,8 @@ class HumanTrackContainer:
         parent_reference_position: npt.ArrayLike,
         optitrack_id: Optional[int] = None,
     ):
+        reference_position = np.array(reference_position)
+        obstacle.set_reference_point(reference_position, in_global_frame=False)
         self._obstacle_list.append(obstacle)
         parent_ind = self.get_obstacle_id_from_name(parent_name)
 
@@ -196,7 +198,7 @@ class HumanTrackContainer:
             self._id_counter,
             name=name,
             optitrack_id=optitrack_id,
-            local_reference=np.array(reference_position),
+            local_reference=reference_position,
             indeces_children=[],
             references_children=[],
         )
