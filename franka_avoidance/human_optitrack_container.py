@@ -87,11 +87,15 @@ def plot_3d_ellipsoid(ax, ellipse: Ellipse):
     ax.plot_wireframe(x, y, z, rstride=4, cstride=4, color="b", alpha=0.2)
 
 
-class HumanTrackContainer(ObstacleContainer):
+# class HumanTrackContainer(Obstacle):
+class HumanTrackContainer:
     dimension = 3
 
     def __init__(self, update_frequency: float = 100.0, visualization_handler=None):
-        super().__init__()
+        # super().__init__(center_position=np.zeros(3))
+
+        self._obstacle_list: list[Obstacle] = []
+
         self._graph = nx.DiGraph()
         self.robot = SimpleRobot(robot_id=16)
         self.optitrack_interface = OptitrackInterface()
@@ -104,6 +108,12 @@ class HumanTrackContainer(ObstacleContainer):
 
         self.visualization_handler = visualization_handler
 
+    def __getitem__(self, key) -> Obstacle:
+        return self._obstacle_list[key]
+
+    def __setitem__(self, key: int, value: Obstacle) -> None:
+        self._obstacle_list[key] = value
+
     def get_obstacle_id_from_name(self, name: str) -> int:
         return [x for x, y in self._graph.nodes(data=True) if y["name"] == name][0]
 
@@ -112,13 +122,30 @@ class HumanTrackContainer(ObstacleContainer):
             x for x, y in self._graph.nodes(data=True) if y["optitrack_id"] == opt_id
         ][0]
 
+    def get_component(self, idx: int) -> Obstacle:
+        return self._obstacle_list[idx]
+
+    def get_parent_idx(self, idx_obs: int) -> Optional[int]:
+        if idx_obs == self.root_idx:
+            return None
+        else:
+            return list(self._graph.predecessors(idx_obs))[0]
+
+    @property
+    def root_id(self) -> int:
+        return self.root_idx
+
+    @property
+    def n_components(self) -> int:
+        return len(self._obstacle_list)
+
     def set_root(
         self,
         obstacle: Obstacle,
         name: str,
         optitrack_id: Optional[int] = None,
     ):
-        super().append(obstacle)
+        self._obstacle_list.append(obstacle)
         self._graph.add_node(
             self._id_counter,
             name=name,
@@ -130,11 +157,10 @@ class HumanTrackContainer(ObstacleContainer):
         self.create_filters(is_updating=(not optitrack_id is None))
 
         self._id_counter += 1
-        self.root_id = 0
+        self.root_idx = 0
 
     def create_filters(self, is_updating: bool):
         if is_updating:
-
             self.position_filters.append(
                 PositionFilter(
                     update_frequency=self.update_frequency,
@@ -163,7 +189,7 @@ class HumanTrackContainer(ObstacleContainer):
         parent_reference_position: npt.ArrayLike,
         optitrack_id: Optional[int] = None,
     ):
-        super().append(obstacle)
+        self._obstacle_list.append(obstacle)
         parent_ind = self.get_obstacle_id_from_name(parent_name)
 
         self._graph.add_node(
@@ -201,15 +227,15 @@ class HumanTrackContainer(ObstacleContainer):
             self.robot.rotation = franka_object.rotation
 
         try:
-            idx_measure = indeces_measures.index(self.root_id)
+            idx_measure = indeces_measures.index(self.root_idx)
 
         except ValueError:
             # Element not in list
             pass
         else:
-            self.update_dynamic_obstacle(self.root_id, optitrack_measures[idx_measure])
+            self.update_dynamic_obstacle(self.root_idx, optitrack_measures[idx_measure])
 
-        obs_indeces = list(self._graph.successors(self.root_id))
+        obs_indeces = list(self._graph.successors(self.root_idx))
         it_node = 0
         while it_node < len(obs_indeces):
             idx_node = obs_indeces[it_node]

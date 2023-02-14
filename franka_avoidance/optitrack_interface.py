@@ -25,7 +25,7 @@ class RigidBody:
 
 @dataclass
 class Pose3D:
-    # TODO: this could be replaces with vartools.ObjectPose
+    # TODO: this could be replaced with vartools.ObjectPose
     position: np.ndarray
     rotation: Rotation
 
@@ -83,8 +83,8 @@ class OptitrackInterface(Node):
 
     # Message length is part of the interface (1x int + 7x float)
     # Do NOT change these parameters
-    msg_length = 36
-    msg_structure = "iffffffff"
+    MSG_LENGTH = 36
+    MSG_STRUCTURE = "iffffffff"
 
     def __init__(
         self,
@@ -120,13 +120,13 @@ class OptitrackInterface(Node):
         binary_data = self.socket.recv()
 
         bodies = []
-        n_bodies = int(len(binary_data) / self.msg_length)
+        n_bodies = int(len(binary_data) / self.MSG_LENGTH)
 
         for ii in range(n_bodies):
             # print(f"n bodies {n_bodies}")
-            subdata = binary_data[ii * self.msg_length : (ii + 1) * self.msg_length]
+            subdata = binary_data[ii * self.MSG_LENGTH : (ii + 1) * self.MSG_LENGTH]
 
-            body_array = np.array(struct.unpack(self.msg_structure, subdata))
+            body_array = np.array(struct.unpack(self.MSG_STRUCTURE, subdata))
             obs_id = body_array[0]
             position = body_array[2:5]
             rotation = Rotation.from_quat(
@@ -147,6 +147,7 @@ class OptitrackInterface(Node):
         return bodies
 
     def publish_robot_transform(self, position: np.ndarray, rotation: Rotation) -> None:
+        # Depreciated -> use SimpleRobot instead
         tt = TransformStamped()
 
         tt.header.stamp = self.get_clock().now().to_msg()

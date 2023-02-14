@@ -22,7 +22,7 @@ franka_lightweight_interface 16 panda_ --sensitivity low --joint-damping off
 
 4. Run Optitrack
 ``` sh
-cd ~/Code/Lukas/CITRIFIED/optitrack
+cd ~/Code/lukas/CITRIFIED/optitrack
 bash docker-run.sh
 ```
 # Sanity check: 1 obstacle == 36 bytes
@@ -32,6 +32,7 @@ Source environment:
 ``` sh
 source ~/.profile_lukas
 ```
+the information message `access control disabled, clients can connect from any host` should appear. Warning, this converts the CapsLock into a CTRL key.
 
 Go to franka_obstacle_avoidance directory and run docker:
 ``` sh
