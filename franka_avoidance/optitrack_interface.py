@@ -15,15 +15,6 @@ from geometry_msgs.msg import TransformStamped
 
 
 @dataclass
-class RigidBody:
-    """Optitrack RigidBody as recieved from the interace."""
-
-    obs_id: int
-    position: np.ndarray
-    rotation: Rotation
-
-
-@dataclass
 class Pose3D:
     # TODO: this could be replaced with vartools.ObjectPose
     position: np.ndarray
