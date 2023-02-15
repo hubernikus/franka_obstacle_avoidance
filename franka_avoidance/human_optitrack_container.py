@@ -1,20 +1,23 @@
 """
 Create a Human which updates using optitrack.
 """
+import numpy as np
+
 from dynamic_obstacle_avoidance.obstacles import CuboidXd as Cuboid
 from dynamic_obstacle_avoidance.obstacles import EllipseWithAxes as Ellipse
 
-from roam.multi_body_human import MultiBodyHuman
+from roam.multi_body_human import MultiBodyObstacle
 
 from franka_avoidance.optitrack_interface import OptitrackInterface
 from franka_avoidance.optitrack_interface import SimpleRobot
 from franka_avoidance.rviz_handler import RvizHandler
 
 
-def create_optitrack_human() -> MultiBodyHuman:
+def create_optitrack_human() -> MultiBodyObstacle:
     """Factory function which gives human based on specific setup."""
+    dimension = 3
 
-    opti_human = MultiBodyHuman(
+    new_human = MultiBodyObstacle(
         visualization_handler=RvizHandler(base_frame="panda_link0"),
         pose_updater=OptitrackInterface(),
         robot=SimpleRobot(robot_id=16),
@@ -31,13 +34,13 @@ def create_optitrack_human() -> MultiBodyHuman:
     lower_arm_axes = [0.4, 0.14, 0.14]
     head_dimension = [0.2, 0.15, 0.3]
 
-    opti_human.set_root(
-        Cuboid(axes_length=[0.4, 0.15, 0.5], center_position=np.zeros(3)),
+    new_human.set_root(
+        Cuboid(axes_length=[0.4, 0.15, 0.5], center_position=np.zeros(dimension)),
         name="body",
         update_id=id_body,
     )
-    opti_human.add_limb(
-        Ellipse(axes_length=[0.12, 0.15, 0.4], center_position=np.zeros(3)),
+    new_human.add_component(
+        Ellipse(axes_length=[0.12, 0.15, 0.4], center_position=np.zeros(dimension)),
         name="neck",
         update_id=None,
         parent_name="body",
@@ -45,8 +48,8 @@ def create_optitrack_human() -> MultiBodyHuman:
         parent_reference_position=[0.0, 0.0, 0.25],
     )
 
-    opti_human.add_limb(
-        Ellipse(axes_length=[0.2, 0.22, 0.3], center_position=np.zeros(3)),
+    new_human.add_component(
+        Ellipse(axes_length=[0.2, 0.22, 0.3], center_position=np.zeros(dimension)),
         name="head",
         update_id=None,
         parent_name="neck",
@@ -54,8 +57,8 @@ def create_optitrack_human() -> MultiBodyHuman:
         parent_reference_position=[0.0, 0.0, 0.07],
     )
 
-    opti_human.add_limb(
-        Ellipse(axes_length=upper_arm_axes, center_position=np.zeros(3)),
+    new_human.add_component(
+        Ellipse(axes_length=upper_arm_axes, center_position=np.zeros(dimension)),
         name="upperarm1",
         update_id=id_upperarm1,
         parent_name="body",
@@ -63,8 +66,8 @@ def create_optitrack_human() -> MultiBodyHuman:
         parent_reference_position=[0.15, 0.0, 0.2],
     )
 
-    opti_human.add_limb(
-        Ellipse(axes_length=lower_arm_axes, center_position=np.zeros(3)),
+    new_human.add_component(
+        Ellipse(axes_length=lower_arm_axes, center_position=np.zeros(dimension)),
         name="lowerarm1",
         update_id=id_lowerarm1,
         parent_name="upperarm1",
@@ -72,8 +75,8 @@ def create_optitrack_human() -> MultiBodyHuman:
         parent_reference_position=[0.2, 0.0, 0],
     )
 
-    opti_human.add_limb(
-        Ellipse(axes_length=upper_arm_axes, center_position=np.zeros(3)),
+    new_human.add_component(
+        Ellipse(axes_length=upper_arm_axes, center_position=np.zeros(dimension)),
         name="upperarm2",
         update_id=id_upperarm2,
         parent_name="body",
@@ -81,8 +84,8 @@ def create_optitrack_human() -> MultiBodyHuman:
         parent_reference_position=[-0.15, 0.0, 0.2],
     )
 
-    opti_human.add_limb(
-        Ellipse(axes_length=lower_arm_axes, center_position=np.zeros(3)),
+    new_human.add_component(
+        Ellipse(axes_length=lower_arm_axes, center_position=np.zeros(dimension)),
         name="lowerarm2",
         update_id=id_lowerarm2,
         parent_name="upperarm2",
@@ -90,7 +93,7 @@ def create_optitrack_human() -> MultiBodyHuman:
         parent_reference_position=[-0.2, 0.0, 0],
     )
 
-    return opti_human
+    return new_human
 
 
 def plot_human_obstacle():
@@ -112,7 +115,7 @@ def main():
     class HumanVisualizer(Node):
         def __init__(self, frequency: float = 100.0) -> None:
             super().__init__("human_visualizer")
-            self.human_with_limbs = MultiBodyHuman.create_optitrack_human()
+            self.human_with_limbs = MultiBodyObstacle.create_optitrack_human()
             period = 1.0 / frequency
 
             self.timer = self.create_timer(period, self.visualizer_callback)
