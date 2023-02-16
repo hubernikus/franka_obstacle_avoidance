@@ -39,7 +39,7 @@ RUN rm -rd lib
 # Install needed (local) python packages
 RUN mkdir ${HOME}/python
 
-RUN echo 1
+RUN echo 2
 # Various tool
 USER ros2
 WORKDIR ${HOME}/python

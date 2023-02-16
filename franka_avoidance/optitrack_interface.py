@@ -1,6 +1,7 @@
 """ A simple wrapper to recieve / send optitrack ZMQ data. """
 
 from dataclasses import dataclass
+import warnings
 
 import struct
 import zmq
@@ -12,6 +13,15 @@ from rclpy.node import Node
 from tf2_ros import TransformBroadcaster
 
 from geometry_msgs.msg import TransformStamped
+
+
+@dataclass
+class RigidBody:
+    """Optitrack RigidBody as recieved from the interace."""
+
+    obs_id: int
+    position: np.ndarray
+    rotation: Rotation
 
 
 @dataclass
@@ -99,7 +109,7 @@ class OptitrackInterface(Node):
         self.socket.setsockopt(zmq.CONFLATE, 1)
         self.socket.bind(tcp_socket)
         self.socket.setsockopt(zmq.SUBSCRIBE, b"")
-
+        # self.socket.settimeout(1.0)
         # TODO: remove robot from here...
         self.robot_body = None
 
@@ -108,13 +118,17 @@ class OptitrackInterface(Node):
 
     def get_messages(self) -> list[RigidBody]:
         # print("[optitrack_interface] Collecting optitrack-data from zmq-server...")
-        binary_data = self.socket.recv()
+        try:
+            binary_data = self.socket.recv(flags=zmq.NOBLOCK)
+        except zmq.error.Again:
+            warnings.warn("No Optitrack recieved.")
+            return []
 
         bodies = []
         n_bodies = int(len(binary_data) / self.MSG_LENGTH)
 
+        print(f"Got {n_bodies} bodies")
         for ii in range(n_bodies):
-            # print(f"n bodies {n_bodies}")
             subdata = binary_data[ii * self.MSG_LENGTH : (ii + 1) * self.MSG_LENGTH]
 
             body_array = np.array(struct.unpack(self.MSG_STRUCTURE, subdata))
