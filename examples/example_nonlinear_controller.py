@@ -23,7 +23,7 @@ from network_interfaces.zmq.network import CommandMessage
 from vartools.states import ObjectPose
 from vartools.directional_space import get_directional_weighted_sum
 
-from dynamic_obstacle_avoidance.obstacles import CuboidXd as Cuboid
+
 from roam.dynamics import DynamicDynamics, SimpleCircularDynamics
 from roam.multi_obstacle_avoider import MultiObstacleAvoider
 from roam.dynamics.projected_rotation_dynamics import (
@@ -33,126 +33,6 @@ from roam.dynamics.projected_rotation_dynamics import (
 # Local library
 from franka_avoidance.robot_interface import RobotZmqInterface as RobotInterface
 from franka_avoidance.human_optitrack_container import create_optitrack_human
-
-
-class FrankaJointSpace:
-    q_min = np.array([-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973])
-    q_max = np.array([2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973])
-
-    q_delta = q_max - q_min
-    q_mean = 0.5 * (q_min + q_max)
-
-    boundary = Cuboid(center_position=q_mean, axes_length=q_delta, is_boundary=True)
-    boundary.boundary_power_factor = 2.0
-
-    # def __init__(self, weight_power: float = 2.0) -> None:
-    #     self.weight_power =
-
-    def __init__(self, weight_power: float = 2):
-        self.weight_power = weight_power
-
-    def get_gamma_weight(
-        self,
-        relative_position: np.ndarray,
-        gamma_max: float = 1.5,
-        gamma_min: float = 1.0,
-    ) -> float:
-        gamma = self.boundary.get_gamma(relative_position, in_obstacle_frame=True)
-        print("rel pos", relative_position)
-        print("gamma", gamma)
-        if gamma > gamma_max:
-            return 0
-        elif gamma < gamma_min:
-            return 1
-
-        return (gamma_max - gamma) / (gamma_max - gamma_min)
-
-    def get_limit_avoidance_velocity(
-        self,
-        joint_position: np.ndarray,
-        joint_velocity: np.ndarray,
-        jacobian: np.ndarray,
-    ) -> np.ndarray:
-        # TODO: watch out - switching at the back -> use RotationalAvoider (!)
-        # IDEAS:
-        # - Move towards null-space direction (?) / use (inverted) normal pulling ?
-        # - Discontuinity when moving directly towards attractor -> induce a decreasing weight (!)
-        # ==> See paper...
-        if not (joint_speed := np.linalg.norm(joint_velocity)):
-            return joint_velocity
-
-        joint_velocity = joint_velocity / joint_speed
-
-        relative_position = joint_position - self.q_mean
-
-        danger_weight = self.get_gamma_weight(relative_position)
-        if danger_weight <= 0:
-            return joint_velocity
-
-        print("Danger weight", danger_weight)
-
-        no_move_direction = self.get_no_move_direction(jacobian)
-        normal = self.boundary.get_normal_direction(
-            relative_position, in_obstacle_frame=True
-        )
-        no_move_weight = np.dot(no_move_direction, normal)
-        if no_move_weight < 0:
-            no_move_direction = -no_move_direction
-            no_move_weight = -no_move_weight
-
-        elif np.isclose(no_move_weight, 0):
-            rotated_velocity = get_directional_weighted_sum(
-                null_direction=normal,
-                weights=np.array([(1 - danger_weight)]),
-                directions=np.array([joint_velocity]).reshape(-1, 1),
-            )
-
-            return rotated_velocity * joint_speed
-
-        rotated_velocity = get_directional_weighted_sum(
-            null_direction=normal,
-            weights=np.array([(1 - danger_weight), danger_weight * no_move_weight]),
-            directions=np.vstack((joint_velocity, no_move_direction)).T,
-        )
-        # Keep velocity magnitude
-        return rotated_velocity * joint_speed
-
-    @staticmethod
-    def get_no_move_direction(jacobian: np.ndarray):
-        _, _, uv = np.linalg.svd(jacobian, compute_uv=True, full_matrices=True)
-        return uv[-1, :]
-
-    @classmethod
-    def get_velocity_away_from_limits(
-        cls, joint_position: np.ndarray, jacobian: np.ndarray
-    ) -> np.ndarray:
-        # PROBLEM: this can lead to jittering when in-between two cornerns...
-        dist_qmin = cls.q_min - joint_position
-        dist_qmax = cls.q_max - joint_position
-
-        dist_q = np.vstack((dist_qmin, dist_qmax)) / (
-            np.tile(cls.q_delta * 0.5, (2, 1))
-        )
-
-        idx_closest = np.argmin(np.abs(dist_q))
-        idx_closest = np.unravel_index(idx_closest, dist_q.shape)
-
-        weight = 1 - abs(dist_q[idx_closest])
-
-        weight = weight**cls.weight_power
-
-        if not weight:
-            return np.zeros_like(joint_position)
-
-        null_velocity = cls.find_null_space_velocity(jacobian)
-
-        if (null_velocity[idx_closest[1]] > 0 and idx_closest[0] == 1) or (
-            null_velocity[idx_closest[1]] < 0 and idx_closest[0] == 0
-        ):
-            null_velocity = -null_velocity
-            # weight = -weight
-
-        return null_velocity, weight
 
 
 class NonlinearAvoidanceController(Node):
