@@ -14,6 +14,8 @@ docker run \
 	   -v "$(pwd)"/franka_avoidance:/home/ros2/ros2_ws/src/franka_avoidance/franka_avoidance:rw \
 	   -v "$(pwd)"/../nonlinear_obstacle_avoidance/scripts:/home/ros2/python/nonlinear_obstacle_avoidance/scripts:rw \
 	   -v "$(pwd)"/../nonlinear_obstacle_avoidance/roam:/home/ros2/python/nonlinear_obstacle_avoidance/roam:rw \
+	   -v "$(pwd)"/../various_tools/vartools:/home/ros2/python/various_tools/vartools:rw \
+	   -v "$(pwd)"/../various_tools/tests:/home/ros2/python/various_tools/tests:rw \
 	   -v "$(pwd)"/../dynamic_obstacle_avoidance/dynamic_obstacle_avoidance:/home/ros2/python/dynamic_obstacle_avoidance/dyBnamic_obstacle_avoidance:rw \
 	   -v "$(pwd)"/../semester_project_LASA_trinca/docker_scripts:/home/ros2/ros2_ws/src/franka_avoidance/project_thibaud/docker_scripts:rw \
 	   -v "$(pwd)"/../semester_project_LASA_trinca/librairies:/home/ros2/ros2_ws/src/franka_avoidance/project_thibaud/librairies:rw \

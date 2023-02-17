@@ -132,7 +132,7 @@ class OptitrackInterface(Node):
             subdata = binary_data[ii * self.MSG_LENGTH : (ii + 1) * self.MSG_LENGTH]
 
             body_array = np.array(struct.unpack(self.MSG_STRUCTURE, subdata))
-            obs_id = body_array[0]
+            obs_id = int(body_array[0])
             position = body_array[2:5]
             rotation = Rotation.from_quat(
                 [body_array[6], body_array[7], body_array[8], body_array[5]]
@@ -144,8 +144,6 @@ class OptitrackInterface(Node):
 
                 self.robot_body = RigidBody(self.robot_id, position, rotation)
                 continue
-
-            # print(f"Updating body: {obs_id}")
 
             bodies.append(RigidBody(obs_id, position, rotation))
 

@@ -65,10 +65,11 @@ class CartesianSpaceController(Node):
             print("Awaiting first state.")
 
         if target is None:
+            quat = np.array([0.0, 1.0, 0.0, 0.0])
             target = sr.CartesianPose(
                 state.ee_state.get_name(),
-                np.array([0.6, 0.3, 0.5]),
-                np.array([0.0, 1.0, 0.0, 0.0]),
+                np.array([0.6, -0.3, 0.5]),
+                quat,
                 state.ee_state.get_reference_frame(),
             )
 
@@ -103,6 +104,7 @@ class CartesianSpaceController(Node):
 
         # self.command_torques = sr.JointTorques(cartesian_command)
         # self.command.joint_state.set_torques(self.command_torques.get_torques())
+        # print("torques", cartesian_command.get_torques())
         self.command.joint_state.set_torques(cartesian_command.get_torques())
 
         self.robot.send_command(self.command)

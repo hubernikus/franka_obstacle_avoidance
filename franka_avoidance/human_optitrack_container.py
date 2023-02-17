@@ -19,26 +19,30 @@ def create_optitrack_human() -> MultiBodyObstacle:
 
     new_human = MultiBodyObstacle(
         visualization_handler=RvizHandler(base_frame="panda_link0"),
-        pose_updater=OptitrackInterface(),
+        pose_updater=OptitrackInterface(
+            robot_id=-1
+        ),  # Robot is not defined here anymore...
         robot=SimpleRobot(robot_id=16),
     )
 
     # Optitrack id's
     id_body = 101
-    id_upperarm1 = 102
-    id_lowerarm1 = 103
-    id_upperarm2 = 104
-    id_lowerarm2 = 105
+    id_upperarm2 = 102
+    id_lowerarm2 = 103
+    id_upperarm1 = 104
+    id_lowerarm1 = 105
 
-    upper_arm_axes = [0.5, 0.18, 0.18]
-    lower_arm_axes = [0.4, 0.14, 0.14]
+    upper_arm_axes = [0.18, 0.18, 0.5]
+    lower_arm_axes = [0.14, 0.14, 0.4]
     head_dimension = [0.2, 0.15, 0.3]
 
     new_human.set_root(
-        Cuboid(axes_length=[0.4, 0.15, 0.5], center_position=np.zeros(dimension)),
+        Cuboid(axes_length=[0.15, 0.4, 0.5], center_position=np.zeros(dimension)),
         name="body",
         update_id=id_body,
     )
+    new_human[-1].set_reference_point(np.array([0, 0, -0.2]), in_global_frame=False)
+
     new_human.add_component(
         Ellipse(axes_length=[0.12, 0.15, 0.4], center_position=np.zeros(dimension)),
         name="neck",
@@ -62,8 +66,8 @@ def create_optitrack_human() -> MultiBodyObstacle:
         name="upperarm1",
         update_id=id_upperarm1,
         parent_name="body",
-        reference_position=[-0.2, 0.0, 0],
-        parent_reference_position=[0.15, 0.0, 0.2],
+        reference_position=[0, 0, -0.2],
+        parent_reference_position=[0.0, 0.18, 0.2],
     )
 
     new_human.add_component(
@@ -71,8 +75,8 @@ def create_optitrack_human() -> MultiBodyObstacle:
         name="lowerarm1",
         update_id=id_lowerarm1,
         parent_name="upperarm1",
-        reference_position=[-0.18, 0.0, 0],
-        parent_reference_position=[0.2, 0.0, 0],
+        reference_position=[0.0, 0, -0.18],
+        parent_reference_position=[0.0, 0, 0.2],
     )
 
     new_human.add_component(
@@ -80,8 +84,8 @@ def create_optitrack_human() -> MultiBodyObstacle:
         name="upperarm2",
         update_id=id_upperarm2,
         parent_name="body",
-        reference_position=[0.2, 0.0, 0],
-        parent_reference_position=[-0.15, 0.0, 0.2],
+        reference_position=[0.0, 0, -0.2],
+        parent_reference_position=[0.0, -0.18, 0.2],
     )
 
     new_human.add_component(
@@ -89,8 +93,8 @@ def create_optitrack_human() -> MultiBodyObstacle:
         name="lowerarm2",
         update_id=id_lowerarm2,
         parent_name="upperarm2",
-        reference_position=[0.18, 0.0, 0],
-        parent_reference_position=[-0.2, 0.0, 0],
+        reference_position=[0.0, 0, -0.18],
+        parent_reference_position=[0.0, 0, 0.2],
     )
 
     return new_human
