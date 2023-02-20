@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from typing import Optional
 import math
+import copy
 
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -113,16 +114,17 @@ class NonlinearAvoidanceController(Node):
             np.array([0.3, 0.0, 0.8]),
             orientation=Rotation.from_euler("y", -math.pi / 2),
         )
-        self.ds_of_base = SimpleCircularDynamics(radius=0.13, pose=pose)
-        self.main_ds = SimpleCircularDynamics(pose=pose, radius=0.3)
+        pose_base = copy.deepcopy(pose)
+        pose_base.position = pose_base.position + np.array([-0.2, 0, 0])
+        self.ds_of_base = SimpleCircularDynamics(pose=pose_base, radius=0.05)
+        # self.main_ds = SimpleCircularDynamics(pose=pose, radius=0.5)
 
         # self.dynamic_dynamics = DynamicDynamics(
-        #     main_dynamics=self.main_ds, dynamics_of_base=self.ds_of_base
+        #     main_dynamics=self.main_ds,
+        #     dynamics_of_base=self.ds_of_base,
+        #     frequency=freq,
         # )
-
-        # self.dynamic_dynamics = DynamicDynamics(
-        #     main_dynamics=main_ds, dynamics_of_base=ds_of_base
-        # )
+        # self.dynamic_dynamics.time_step_of_base_movement = 1.0 / 10  # Try fast !
 
         # self.rotation_projector = ProjectedRotationDynamics(
         #     attractor_position=self.dynamic_dynamics.position,
@@ -187,9 +189,13 @@ class NonlinearAvoidanceController(Node):
 
         # Compute Avoidance-DS
         position = state.ee_state.get_position()
-        # avoidance_velocity = self.avoider.evaluate(position)
-        desired_velocity = self.main_ds.evaluate(position)
-        # twist.set_linear_velocity(avoidance_velocity)
+        # desired_velocity = self.avoider.evaluate(position)
+        desired_velocity = self.ds_of_base.evaluate(position)
+
+        # desired_velocity = self.dynamic_dynamics.evaluate(position)
+        # One time-step of the base-system.
+        # self.dynamic_dynamics.update_base(position)
+        # print("position", self.dynamic_dynamics.position)
 
         if np.linalg.norm(desired_velocity) > self.max_velocity:
             desired_velocity = (
