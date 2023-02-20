@@ -33,6 +33,7 @@ from roam.dynamics.projected_rotation_dynamics import (
 # Local library
 from franka_avoidance.robot_interface import RobotZmqInterface as RobotInterface
 from franka_avoidance.human_optitrack_container import create_optitrack_human
+from franka_avoidance.franka_joint_space import FrankaJointSpace
 
 
 class NonlinearAvoidanceController(Node):
@@ -112,7 +113,7 @@ class NonlinearAvoidanceController(Node):
             np.array([0.3, 0.0, 0.8]),
             orientation=Rotation.from_euler("y", -math.pi / 2),
         )
-        self.ds_of_base = SimpleCircularDynamics(radius=0.1, pose=pose)
+        self.ds_of_base = SimpleCircularDynamics(radius=0.13, pose=pose)
         self.main_ds = SimpleCircularDynamics(pose=pose, radius=0.3)
 
         # self.dynamic_dynamics = DynamicDynamics(
@@ -224,13 +225,15 @@ class NonlinearAvoidanceController(Node):
             state.jacobian.data(), twist.get_twist(), rcond=None
         )[0]
 
-        desired_joint_vel = desired_joint_vel * 0.3  # Slow it down for testing
+        desired_joint_vel = desired_joint_vel * 0.7  # Slow it down for testing
 
         final_joint_velocity = self.joint_robot.get_limit_avoidance_velocity(
             joint_position=state.joint_state.get_positions(),
             joint_velocity=desired_joint_vel,
             jacobian=state.jacobian.data(),
         )
+
+        # print("Final speed", np.linalg.norm(final_joint_velocity))
 
         self.command.joint_state.set_velocities(final_joint_velocity)
 
@@ -243,7 +246,7 @@ if __name__ == "__main__":
     robot_interface = RobotInterface("*:1601", "*:1602")
 
     controller = NonlinearAvoidanceController(
-        robot=robot_interface, freq=20, is_simulation=False
+        robot=robot_interface, freq=200, is_simulation=False
     )
 
     try:

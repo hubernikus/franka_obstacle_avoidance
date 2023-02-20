@@ -32,12 +32,16 @@ def fast_directional_addition(
 
 
 class FrankaJointSpace:
+    """
+    Controller which allows avoiding the join-limits q_min / q_max of the franka controller by explointing the null-space of the 7DOF robot.
+    """
+
+    # Joint Limits
     q_min = np.array([-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973])
     q_max = np.array([2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973])
 
     q_delta = q_max - q_min
     q_mean = 0.5 * (q_min + q_max)
-
     boundary = Cuboid(center_position=q_mean, axes_length=q_delta, is_boundary=True)
     boundary.boundary_power_factor = 2.0
 
@@ -70,26 +74,25 @@ class FrankaJointSpace:
         gamma_value: float,
         *,
         gamma_min: float = 1.0,
-        gamma_max: float = 1.5,
+        gamma_max: float = 1.1,
         radius_min: float = np.pi * 3.0 / 4,
         radius_max: float = np.pi,
     ) -> float:
         """The weight is calculated based on normal and the desired direction"""
-        norm_radius = np.arccos(np.dot(normal_direction, initial_direction))
 
         if gamma_value >= gamma_max:
             return 0.0
         elif gamma_value <= gamma_min:
             return 1.0
-
         gamma_weight = (gamma_max - gamma_value) / (gamma_max - gamma_min)
 
-        if dir_norm <= radius_min:
+        norm_radius = np.arccos(np.dot(normal_direction, initial_direction))
+        if norm_radius <= radius_min:
             return gamma_weight
         elif norm_radius >= radius_max:
             return 0.0
-
         weight_power = (radius_max - radius_min) / (radius_max - norm_radius)
+
         return gamma_weight**weight_power
 
     def get_ideal_avoidance_direction(
@@ -123,11 +126,8 @@ class FrankaJointSpace:
         joint_velocity: np.ndarray,
         jacobian: np.ndarray,
     ) -> np.ndarray:
+        """Initial Null-Space pulling - BUT this is not continuous / leads to switching (!)."""
         # TODO: watch out - switching at the back -> use RotationalAvoider (!)
-        # IDEAS:
-        # - Move towards null-space direction (?) / use (inverted) normal pulling ?
-        # - Discontuinity when moving directly towards attractor -> induce a decreasing weight (!)
-        # ==> See paper...
         if not (joint_speed := linalg.norm(joint_velocity)):
             return joint_velocity
 
@@ -135,31 +135,34 @@ class FrankaJointSpace:
         relative_position = joint_position - self.q_mean
 
         gamma = self.boundary.get_gamma(relative_position, in_obstacle_frame=True)
-        normal = self.boundary.get_normal_direction(
+        normal_direction = self.boundary.get_normal_direction(
             relative_position, in_obstacle_frame=True
         )
-        rotation_weight = self.get_rotation_weight(normal, joint_velocity, gamma)
+        rotation_weight = self.get_rotation_weight(
+            normal_direction, joint_velocity, gamma
+        )
         if rotation_weight <= 0:
-            return joint_velocity
+            return joint_velocity * joint_speed
 
         nullspace_direction = self.get_nullspace_direction(jacobian)
 
-        nullspace_weight = np.dot(nullspace_direction, normal)
+        nullspace_weight = np.dot(nullspace_direction, normal_direction)
 
         if nullspace_weight < 0:
             nullspace_direction = -nullspace_direction
             nullspace_weight = -nullspace_weight
 
-        normal_weight = np.min((1.0 - rotation_weight), nullspace_weight)
+        normal_weight = min((1.0 - rotation_weight), nullspace_weight)
 
         optimal_avoidance_diection = fast_directional_addition(
-            nullspace_direction, nullspace_direction, weight=normal_weight
+            normal_direction, nullspace_direction, weight=normal_weight
         )
 
         rotated_velocity = fast_directional_addition(
             joint_velocity, optimal_avoidance_diection, weight=rotation_weight
         )
 
+        # breakpoint()
         # Keep velocity magnitude
         return rotated_velocity * joint_speed
 
