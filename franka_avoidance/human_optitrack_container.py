@@ -2,6 +2,7 @@
 Create a Human which updates using optitrack.
 """
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 from dynamic_obstacle_avoidance.obstacles import CuboidXd as Cuboid
 from dynamic_obstacle_avoidance.obstacles import EllipseWithAxes as Ellipse
@@ -27,24 +28,34 @@ def create_optitrack_human() -> MultiBodyObstacle:
 
     # Optitrack id's
     id_body = 101
-    id_upperarm2 = 102
-    id_lowerarm2 = 103
-    id_upperarm1 = 104
-    id_lowerarm1 = 105
+    id_upperarm1 = 102
+    id_lowerarm1 = 103
+    id_upperarm2 = 104
+    id_lowerarm2 = 105
 
     upper_arm_axes = [0.18, 0.18, 0.5]
     lower_arm_axes = [0.14, 0.14, 0.4]
     head_dimension = [0.2, 0.15, 0.3]
 
+    margin_absolut = 0.4
+
     new_human.set_root(
-        Cuboid(axes_length=[0.15, 0.4, 0.5], center_position=np.zeros(dimension)),
+        Cuboid(
+            axes_length=[0.15, 0.4, 0.5],
+            center_position=np.zeros(dimension),
+            margin_absolut=margin_absolut,
+        ),
         name="body",
         update_id=id_body,
     )
     new_human[-1].set_reference_point(np.array([0, 0, -0.2]), in_global_frame=False)
 
     new_human.add_component(
-        Ellipse(axes_length=[0.12, 0.15, 0.4], center_position=np.zeros(dimension)),
+        Ellipse(
+            axes_length=[0.12, 0.15, 0.4],
+            center_position=np.zeros(dimension),
+            margin_absolut=margin_absolut,
+        ),
         name="neck",
         update_id=None,
         parent_name="body",
@@ -53,7 +64,11 @@ def create_optitrack_human() -> MultiBodyObstacle:
     )
 
     new_human.add_component(
-        Ellipse(axes_length=[0.2, 0.22, 0.3], center_position=np.zeros(dimension)),
+        Ellipse(
+            axes_length=[0.2, 0.22, 0.3],
+            center_position=np.zeros(dimension),
+            margin_absolut=margin_absolut,
+        ),
         name="head",
         update_id=None,
         parent_name="neck",
@@ -62,16 +77,24 @@ def create_optitrack_human() -> MultiBodyObstacle:
     )
 
     new_human.add_component(
-        Ellipse(axes_length=upper_arm_axes, center_position=np.zeros(dimension)),
+        Ellipse(
+            axes_length=upper_arm_axes,
+            center_position=np.zeros(dimension),
+            margin_absolut=margin_absolut,
+        ),
         name="upperarm1",
         update_id=id_upperarm1,
         parent_name="body",
         reference_position=[0, 0, -0.2],
-        parent_reference_position=[0.0, 0.18, 0.2],
+        parent_reference_position=[0.0, -0.18, 0.2],
     )
 
     new_human.add_component(
-        Ellipse(axes_length=lower_arm_axes, center_position=np.zeros(dimension)),
+        Ellipse(
+            axes_length=lower_arm_axes,
+            center_position=np.zeros(dimension),
+            margin_absolut=margin_absolut,
+        ),
         name="lowerarm1",
         update_id=id_lowerarm1,
         parent_name="upperarm1",
@@ -80,23 +103,41 @@ def create_optitrack_human() -> MultiBodyObstacle:
     )
 
     new_human.add_component(
-        Ellipse(axes_length=upper_arm_axes, center_position=np.zeros(dimension)),
+        Ellipse(
+            axes_length=upper_arm_axes,
+            center_position=np.zeros(dimension),
+            margin_absolut=margin_absolut,
+        ),
         name="upperarm2",
         update_id=id_upperarm2,
         parent_name="body",
-        reference_position=[0.0, 0, -0.2],
-        parent_reference_position=[0.0, -0.18, 0.2],
+        reference_position=[0.0, 0, 0.2],
+        parent_reference_position=[0.0, 0.19, 0.2],
     )
 
     new_human.add_component(
-        Ellipse(axes_length=lower_arm_axes, center_position=np.zeros(dimension)),
+        Ellipse(
+            axes_length=lower_arm_axes,
+            center_position=np.zeros(dimension),
+            margin_absolut=margin_absolut,
+        ),
         name="lowerarm2",
         update_id=id_lowerarm2,
         parent_name="upperarm2",
-        reference_position=[0.0, 0, -0.18],
-        parent_reference_position=[0.0, 0, 0.2],
+        reference_position=[0.0, 0, 0.18],
+        parent_reference_position=[0.0, 0, -0.2],
     )
 
+    # Make limbs pointing down
+    # idx_obs = new_human.get_obstacle_id_from_name("upperarm2")
+    # new_human[idx_obs].orientation = Rotation.from_euler("y", np.pi)
+    # # new_human.set_orientation(idx_obs, orientation=)
+    # new_human.align_position_with_parent(idx_obs)
+
+    # Make limbs pointing down
+    # idx_obs = new_human.get_obstacle_id_from_name("lowerarm2")
+    # new_human[idx_obs].orientation = Rotation.from_euler("y", np.pi / 2)
+    # new_human.align_position_with_parent(idx_obs)
     return new_human
 
 

@@ -137,9 +137,7 @@ class OptitrackInterface(Node):
             rotation = Rotation.from_quat(
                 [body_array[6], body_array[7], body_array[8], body_array[5]]
             )
-
             if obs_id == self.robot_id:
-                # print("got robot.")
                 self.publish_robot_transform(position, rotation)
 
                 self.robot_body = RigidBody(self.robot_id, position, rotation)
@@ -166,4 +164,5 @@ class OptitrackInterface(Node):
         tt.transform.rotation.z = quat[2]
         tt.transform.rotation.w = quat[3]
 
+        # print("[INFO] Published robot transform.")
         self.tf_broadcaster.sendTransform(tt)

@@ -2,6 +2,7 @@
 from typing import Optional
 import math
 import copy
+import time
 
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -35,6 +36,7 @@ from roam.dynamics.projected_rotation_dynamics import (
 from franka_avoidance.robot_interface import RobotZmqInterface as RobotInterface
 from franka_avoidance.human_optitrack_container import create_optitrack_human
 from franka_avoidance.franka_joint_space import FrankaJointSpace
+from franka_avoidance.velocity_publisher import VelocityPublisher
 
 
 class NonlinearAvoidanceController(Node):
@@ -145,6 +147,10 @@ class NonlinearAvoidanceController(Node):
             convergence_dynamics=self.rotation_projector,
         )
 
+        robot_frame = "panda_link0"
+        self.inital_velocity_publisher = VelocityPublisher("initial", robot_frame)
+        self.rotated_velocity_publisher = VelocityPublisher("rotated", robot_frame)
+
         self.command = CommandMessage()
         # self.command.control_type = [ControlType.EFFORT.value]
         self.command.control_type = [ControlType.VELOCITY.value]
@@ -189,8 +195,19 @@ class NonlinearAvoidanceController(Node):
 
         # Compute Avoidance-DS
         position = state.ee_state.get_position()
-        # desired_velocity = self.avoider.evaluate(position)
+
         desired_velocity = self.ds_of_base.evaluate(position)
+        self.inital_velocity_publisher.publish(position, desired_velocity)
+
+        tic = time.perf_counter()
+        desired_velocity = self.avoider.evaluate(position)
+        toc = time.perf_counter()
+        print(f"Timer took: {toc - tic:0.4f} s")
+
+        desired_velocity = self.ds_of_base.evaluate(position)
+        self.rotated_velocity_publisher.publish(position, desired_velocity)
+
+        # desired_velocity = self.ds_of_base.evaluate(position)
 
         # desired_velocity = self.dynamic_dynamics.evaluate(position)
         # One time-step of the base-system.

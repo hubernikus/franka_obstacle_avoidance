@@ -32,15 +32,26 @@ class RvizHandler(Node):
         # self.timer = self.create_timer(timer_period, self.timer_callback)
         # self.ii = 0
 
-        self.base_frame = base_frame
-
+        self._base_frame = base_frame
         self.marker_array = MarkerArray()
 
         # self.update(obstacles, obstacle_ids)
 
+    @property
+    def base_frame(self) -> "str":
+        return self._base_frame
+
+    @base_frame.setter
+    def base_frame(self, value: "str") -> None:
+        self._base_frame = value
+
+        for marker in self.marker_array.markers:
+            marker.header.frame_id = self._base_frame
+
     def get_marker_obstacle(self, obstacle: Obstacle, obstacle_id) -> Marker:
         marker = Marker()
         marker.header.frame_id = self.base_frame
+        # breakpoint()
         marker.header.stamp = self.get_clock().now().to_msg()
 
         marker.ns = "obstacles"
