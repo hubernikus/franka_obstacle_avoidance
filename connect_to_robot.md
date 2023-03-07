@@ -25,9 +25,9 @@ franka_lightweight_interface 16 panda_ --sensitivity low --joint-damping off
 cd ~/Code/lukas/CITRIFIED/optitrack
 bash docker-run.sh
 ```
-# Sanity check: 1 obstacle == 36 bytes
+#### Sanity check: 1 obstacle == 36 bytes
 
-4. 
+5. 
 Source environment:
 ``` sh
 source ~/.profile_lukas

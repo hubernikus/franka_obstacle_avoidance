@@ -33,8 +33,9 @@ from roam.dynamics.projected_rotation_dynamics import (
 )
 
 # Local library
+# from franka_avoidance.human_optitrack_container import create_optitrack_human
 from franka_avoidance.robot_interface import RobotZmqInterface as RobotInterface
-from franka_avoidance.human_optitrack_container import create_optitrack_human
+from franka_avoidance.human_optitrack_container import create_flexilimb_human
 from franka_avoidance.franka_joint_space import FrankaJointSpace
 from franka_avoidance.velocity_publisher import VelocityPublisher
 
@@ -140,7 +141,7 @@ class NonlinearAvoidanceController(Node):
             reference_velocity=lambda x: x - self.ds_of_base.pose.position,
         )
 
-        self.human_with_limbs = create_optitrack_human()
+        self.human_with_limbs = create_flexilimb_human()
         self.avoider = MultiObstacleAvoider(
             obstacle=self.human_with_limbs,
             initial_dynamics=self.ds_of_base,
@@ -183,7 +184,6 @@ class NonlinearAvoidanceController(Node):
 
     def controller_callback(self) -> None:
         state = self.robot.get_state()
-        # print(state)
         self.human_with_limbs.update()
 
         if not state:
