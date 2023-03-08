@@ -15,16 +15,19 @@ from geometry_msgs.msg import PoseStamped
 def get_orientation_from_direction(direction: np.ndarray) -> np.ndarray:
     if not (dir_norm := linalg.norm(direction)):
         return Rotation.from_quat([1.0, 0, 0, 0.0])
+    null_vector = np.array([1.0, 0, 0])
 
     rot_vec = np.cross([1.0, 0, 0.0], direction / dir_norm)
     if not (rotvec_norm := np.linalg.norm(rot_vec)):
         return Rotation.from_quat([1.0, 0, 0, 0.0])
 
     rot_vec = rot_vec / rotvec_norm
-    theta = np.arcsin(rotvec_norm)
-    quat = np.hstack((rot_vec * np.cos(theta / 2.0), [np.sin(theta / 2.0)]))
+    # theta = np.arcsin(rotvec_norm)
+    # quat = np.hstack((rot_vec * np.cos(theta / 2.0), [np.sin(theta / 2.0)]))
+    # return Rotation.from_quat(quat)
 
-    return Rotation.from_quat(quat)
+    theta = np.arccos(np.dot(null_vector, direction))
+    return Rotation.from_rotvec(rot_vec / rotvec_norm * theta)
 
 
 class VelocityPublisher(Node):

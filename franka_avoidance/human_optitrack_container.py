@@ -18,11 +18,12 @@ def create_flexilimb_human() -> FlexiLimbHuman:
     dimension = 3
 
     # Optitrack id's
-    # id_body = 101
-    id_ellbow_r = 101
-    id_wrist_r = 102
-    id_shoulder_r = 103
-    id_shoulder_l = 104
+    id_body = 101
+    id_forearm_r = 102
+    # id_shoulder_r = 101
+    # id_ellbow_r = 102
+    # id_wrist_r = 103
+    # id_shoulder_l = 104
 
     new_human = FlexiLimbHuman(
         visualization_handler=RvizHandler(base_frame="panda_link0"),
@@ -30,10 +31,12 @@ def create_flexilimb_human() -> FlexiLimbHuman:
             robot_id=-1
         ),  # Robot is not defined here anymore...
         robot=SimpleRobot(robot_id=16),
-        id_wrist_r=id_wrist_r,
-        id_ellbow_r=id_ellbow_r,
-        id_shoulder_l=id_shoulder_l,
-        id_shoulder_r=id_shoulder_r,
+        id_wrist_r=None,
+        id_ellbow_r=None,
+        id_shoulder_l=None,
+        id_shoulder_r=None,
+        id_body=id_body,
+        id_forearm_r=id_forearm_r,
     )
 
     # Simplification by only considering one hand and one limb
@@ -41,16 +44,18 @@ def create_flexilimb_human() -> FlexiLimbHuman:
     lower_arm_axes = [0.14, 0.14, 0.4]
     head_dimension = [0.2, 0.15, 0.3]
 
-    margin_absolut = 0.5
+    margin_absolut = 0.14
+    distance_scaling = 5
 
     new_human.set_root(
         Cuboid(
             axes_length=[0.15, 0.4, 0.5],
             center_position=np.zeros(dimension),
             margin_absolut=margin_absolut,
+            distance_scaling=distance_scaling,
         ),
         name="body",
-        # update_id=id_body,
+        update_id=id_body,
     )
     new_human[-1].set_reference_point(np.array([0, 0, -0.2]), in_global_frame=False)
 
@@ -59,6 +64,7 @@ def create_flexilimb_human() -> FlexiLimbHuman:
             axes_length=[0.12, 0.15, 0.4],
             center_position=np.zeros(dimension),
             margin_absolut=margin_absolut,
+            distance_scaling=distance_scaling,
         ),
         name="neck",
         update_id=None,
@@ -72,6 +78,7 @@ def create_flexilimb_human() -> FlexiLimbHuman:
             axes_length=[0.2, 0.22, 0.3],
             center_position=np.zeros(dimension),
             margin_absolut=margin_absolut,
+            distance_scaling=distance_scaling,
         ),
         name="head",
         update_id=None,
@@ -85,6 +92,7 @@ def create_flexilimb_human() -> FlexiLimbHuman:
             axes_length=upper_arm_axes,
             center_position=np.zeros(dimension),
             margin_absolut=margin_absolut,
+            distance_scaling=distance_scaling,
         ),
         name="upperarm_r",
         # update_id=None,
@@ -98,9 +106,10 @@ def create_flexilimb_human() -> FlexiLimbHuman:
             axes_length=lower_arm_axes,
             center_position=np.zeros(dimension),
             margin_absolut=margin_absolut,
+            distance_scaling=distance_scaling,
         ),
         name="forearm_r",
-        # update_id=id_lowerarm1,
+        update_id=id_forearm_r,
         parent_name="upperarm_r",
         reference_position=[0.0, 0, -0.18],
         parent_reference_position=[0.0, 0, 0.2],
@@ -111,6 +120,7 @@ def create_flexilimb_human() -> FlexiLimbHuman:
             axes_length=upper_arm_axes,
             center_position=np.zeros(dimension),
             margin_absolut=margin_absolut,
+            distance_scaling=distance_scaling,
         ),
         name="upperarm_l",
         # update_id=id_upperarm2,
@@ -124,6 +134,7 @@ def create_flexilimb_human() -> FlexiLimbHuman:
             axes_length=lower_arm_axes,
             center_position=np.zeros(dimension),
             margin_absolut=margin_absolut,
+            distance_scaling=distance_scaling,
         ),
         name="forearm_l",
         # update_id=id_lowerarm2,

@@ -114,12 +114,12 @@ class NonlinearAvoidanceController(Node):
 
         # Create circular - circular dynamics
         pose = ObjectPose(
-            np.array([0.3, 0.0, 0.8]),
+            np.array([0.9, -0.2, 0.8]),
             orientation=Rotation.from_euler("y", -math.pi / 2),
         )
         pose_base = copy.deepcopy(pose)
-        pose_base.position = pose_base.position + np.array([-0.2, 0, 0])
-        self.ds_of_base = SimpleCircularDynamics(pose=pose_base, radius=0.05)
+        pose_base.position = pose_base.position
+        self.ds_of_base = SimpleCircularDynamics(pose=pose_base, radius=0.2)
         # self.main_ds = SimpleCircularDynamics(pose=pose, radius=0.5)
 
         # self.dynamic_dynamics = DynamicDynamics(
@@ -191,7 +191,6 @@ class NonlinearAvoidanceController(Node):
 
         twist = sr.CartesianTwist(self.ds.evaluate(state.ee_state))
         twist.clamp(self.max_velocity, 0.5)
-        # print(twist)
 
         # Compute Avoidance-DS
         position = state.ee_state.get_position()
@@ -203,28 +202,25 @@ class NonlinearAvoidanceController(Node):
         desired_velocity = self.avoider.evaluate(position)
         toc = time.perf_counter()
         print(f"Timer took: {toc - tic:0.4f} s")
-
-        desired_velocity = self.ds_of_base.evaluate(position)
         self.rotated_velocity_publisher.publish(position, desired_velocity)
 
+        # Reset to initial DS
         # desired_velocity = self.ds_of_base.evaluate(position)
 
-        # desired_velocity = self.dynamic_dynamics.evaluate(position)
         # One time-step of the base-system.
         # self.dynamic_dynamics.update_base(position)
         # print("position", self.dynamic_dynamics.position)
-
         if np.linalg.norm(desired_velocity) > self.max_velocity:
             desired_velocity = (
                 desired_velocity / np.linalg.norm(desired_velocity) * self.max_velocity
             )
 
+        # print("desired_velocity", desired_velocity)
         twist.set_linear_velocity(desired_velocity)
-
         # Compute the torques
-        cartesian_command = self.ctrl.compute_command(
-            twist, state.ee_state, state.jacobian
-        )
+        # cartesian_command = self.ctrl.compute_command(
+        #     twist, state.ee_state, state.jacobian
+        # )
 
         self.command.joint_state = state.joint_state
         # self.command_torques = sr.JointTorques(cartesian_command)
@@ -258,8 +254,11 @@ class NonlinearAvoidanceController(Node):
 
         # print("Final speed", np.linalg.norm(final_joint_velocity))
 
+        # print("desired command", desired_joint_vel)
+        # print("final_velocity", final_joint_velocity)
+        if np.any(np.isnan(final_joint_velocity)):
+            breakpoint()
         self.command.joint_state.set_velocities(final_joint_velocity)
-
         self.robot.send_command(self.command)
 
 

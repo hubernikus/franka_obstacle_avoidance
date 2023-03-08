@@ -29,6 +29,7 @@ from roam.dynamics.projected_rotation_dynamics import (
 
 
 def get_rotation_between_vectors(vec1: np.ndarray, vec2: np.ndarray) -> Rotation:
+    """Returns rotation / orientation needed to obtain vec2, starting from vec1"""
     if not (vec1_norm := np.linalg.norm(vec1)):
         return Rotation.from_quat([0, 0, 0, 1.0])
     vec1 = np.array(vec1) / vec1_norm
@@ -41,10 +42,28 @@ def get_rotation_between_vectors(vec1: np.ndarray, vec2: np.ndarray) -> Rotation
     if not (rotvec_norm := np.linalg.norm(rot_vec)):
         return Rotation.from_quat([0, 0, 0, 1.0])
 
-    rot_vec = rot_vec / rotvec_norm
-    theta = np.arcsin(rotvec_norm)
-    quat = np.hstack((rot_vec * np.cos(theta / 2.0), [np.sin(theta / 2.0)]))
-    return Rotation.from_quat(quat)
+    theta = np.arccos(np.dot(vec1, vec2))
+    return Rotation.from_rotvec(rot_vec / rotvec_norm * theta)
+
+    # quat = np.hstack((rot_vec * np.cos(theta / 2.0), [np.sin(theta / 2.0)]))
+    # return Rotation.from_quat(quat)
+
+
+def test_vector_rotation():
+    vec_final = np.array([0.14494458, 0.33341965, 0.02992903])
+    vec_final = vec_final / LA.norm(vec_final)
+
+    vec_init1 = np.array([0, 1.0, 0])
+    rotation1 = get_rotation_between_vectors(vec_init1, vec_final)
+    # euler1 = rotation1.as_euler("zyx")
+    vec_recons1 = rotation1.apply(vec_init1)
+    assert np.allclose(vec_final, vec_recons1)
+
+    vec_init2 = np.array([0, -1.0, 0])
+    rotation2 = get_rotation_between_vectors(vec_init2, vec_final)
+    # euler2 = rotation2.as_euler("zyx")
+    vec_recons2 = rotation2.apply(vec_init2)
+    assert np.allclose(vec_final, vec_recons2)
 
 
 @dataclass
@@ -52,6 +71,7 @@ class Joint:
     # If needed - a filter could be added here...
     id_optitrack: int
     position: np.ndarray
+    orientation: Optional[Rotation] = None
     # joint_name: str
 
 
@@ -68,6 +88,8 @@ class FlexiLimbHuman:
         id_wrist_r: Optional[int] = None,
         id_shoulder_r: Optional[int] = None,
         id_shoulder_l: Optional[int] = None,
+        id_forearm_r: Optional[int] = None,
+        id_body: Optional[int] = None,
     ):
         # super().__init__(center_position=np.zeros(3))
 
@@ -87,13 +109,17 @@ class FlexiLimbHuman:
 
         self.visualization_handler = visualization_handler
 
-        self.joints: dict[str, Joint] = {}
-        self.joints["ellbow_r"] = Joint(id_ellbow_r, np.zeros(self.dimension))
-        self.joints["wrist_r"] = Joint(id_wrist_r, np.zeros(self.dimension))
-        self.joints["shoulder_r"] = Joint(id_shoulder_r, np.zeros(self.dimension))
-        self.joints["shoulder_l"] = Joint(id_shoulder_l, np.zeros(self.dimension))
+        self.optitracks: dict[str, Joint] = {}
+        self.optitracks["ellbow_r"] = Joint(id_ellbow_r, np.zeros(self.dimension))
+        self.optitracks["wrist_r"] = Joint(id_wrist_r, np.zeros(self.dimension))
+        self.optitracks["shoulder_r"] = Joint(id_shoulder_r, np.zeros(self.dimension))
+        self.optitracks["shoulder_l"] = Joint(id_shoulder_l, np.zeros(self.dimension))
+        self.optitracks["shoulder_l"] = Joint(id_shoulder_l, np.zeros(self.dimension))
+        self.optitracks["forearm_r"] = Joint(id_forearm_r, np.zeros(self.dimension))
+        self.optitracks["body"] = Joint(id_body, np.zeros(self.dimension))
 
         self.margin_upperarms: Optional[float] = None
+        self.ellbow_joint_dist: Optional[float] = None
 
     def __getitem__(self, key) -> Obstacle:
         return self._obstacle_list[key]
@@ -202,6 +228,9 @@ class FlexiLimbHuman:
         self.create_filters(is_updating=(not update_id is None))
         self._id_counter += 1
 
+        # print(f"Name : {name} --- number {len(self._obstacle_list)}")
+        # breakpoint()
+
     @property
     def optitrack_indeces(self):
         indeces_tree_opti = [-1] * self.n_components
@@ -211,22 +240,36 @@ class FlexiLimbHuman:
 
         return indeces_tree_opti
 
-    def update_joints(self) -> None:
-        for kk in self.joints.keys():
+    def update_optitracks(self) -> None:
+        # print(self.indeces_measures)
+        for kk in self.optitracks.keys():
             try:
-                idx_joint = self.indeces_measures.index(self.joints[kk].id_optitrack)
+                idx_joint = self.indeces_measures.index(
+                    self.optitracks[kk].id_optitrack
+                )
 
             except ValueError:
                 # Element n ot in list
                 continue
 
-            self.joints[kk].position = self.robot.pose.transform_position_to_relative(
+            self.optitracks[
+                kk
+            ].position = self.robot.pose.transform_position_to_relative(
                 self.new_object_poses[idx_joint].position
             )
 
+            self.optitracks[
+                kk
+            ].orientation = self.robot.pose.transform_orientation_to_relative(
+                self.new_object_poses[idx_joint].rotation
+            )
+            # if kk == "forearm_r" or kk == "body":
+            #     breakpoint()
+
     def update_robot(self):
-        if self.robot is not None:
+        if self.robot is None:
             return
+
         try:
             index_franka_list = self.indeces_measures.index(self.robot.optitrack_id)
 
@@ -248,85 +291,136 @@ class FlexiLimbHuman:
         local_reference_parent = self._graph.nodes[idx_parent]["references_children"][
             idx_local_ref
         ]
+
         reference_parent = self[idx_parent].pose.transform_position_from_relative(
             local_reference_parent
         )
+
         return reference_parent
 
-    def update_body(self):
+    def update_body(self, use_joints: bool = False):
         """Body is set to be in between shoulders."""
         idx_body = self.get_obstacle_id_from_name("body")
-        self[idx_body].position = 0.5 * (
-            self.joints["shoulder_l"].position + self.joints["shoulder_r"].position
-        )
-        self[idx_body].position[2] = 0.1  # No movement in z...
 
-        self[idx_body].pose.orientation = get_rotation_between_vectors(
-            [0, 1.0, 0],
-            self.joints["shoulder_r"].position - self.joints["shoulder_l"].position,
-        )
+        if self.ellbow_joint_dist is None:
+            self.ellbow_joint_dist = LA.norm(
+                self[idx_body].get_reference_point(in_global_frame=False)
+            )
+
+        if use_joints:
+            # Use shoulde rlinks - or directly a body-placement
+            self[idx_body].position = 0.5 * (
+                self.optitracks["shoulder_l"].position
+                + self.optitracks["shoulder_r"].position
+            )
+
+            shoulder_vec = (
+                self.optitracks["shoulder_r"].position
+                - self.optitracks["shoulder_l"].position
+            )
+
+            # shoulder_vec = [1.0, 0, 0]
+            self[idx_body].pose.orientation = get_rotation_between_vectors(
+                [0, 1.0, 0],
+                shoulder_vec,
+            )
+        else:
+            self[idx_body].position = self.optitracks["body"].position
+            if self.optitracks["body"].orientation is None:
+                self[idx_body].orientation = Rotation.from_rotvec([0, 0, 0])
+
+            else:
+                self[idx_body].orientation = self.optitracks["body"].orientation
+
+        # Limit movement and orietnation
+        self[idx_body].position[2] = 0.4
+
         zyx_rot = self[idx_body].pose.orientation.as_euler("zyx")
         self[idx_body].pose.orientation = Rotation.from_euler("z", zyx_rot[0])
+        # self[idx_body].pose.orientation = Rotation.from_euler("z", 0)
+        # breakpoint()
 
-        # The joints now have to be updated - based on the position
-        self.joints["shoulder_l"].position = self.get_joint_position_to_parent(
+        # The optitracks now have to be updated - based on the position
+        self.optitracks["shoulder_l"].position = self.get_joint_position_to_parent(
             "upperarm_l"
         )
-        self.joints["shoulder_r"].position = self.get_joint_position_to_parent(
+        self.optitracks["shoulder_r"].position = self.get_joint_position_to_parent(
             "upperarm_r"
         )
 
-    def update_forearm(self):
+    def update_forearm(self, use_joints: bool = False):
         idx_body = self.get_obstacle_id_from_name("forearm_r")
-        self[idx_body].position = 0.5 * (
-            self.joints["wrist_r"].position + self.joints["ellbow_r"].position
-        )
 
-        ellbow_dir = self.joints["wrist_r"].position - self.joints["ellbow_r"].position
-        self[idx_body].pose.orientation = get_rotation_between_vectors(
-            [0.0, 0.0, 1.0],
-            ellbow_dir,
-        )
+        if use_joints:
+            self[idx_body].position = 0.5 * (
+                self.optitracks["wrist_r"].position
+                + self.optitracks["ellbow_r"].position
+            )
 
-        # Update joints to be in-between
-        if ellbow_norm := np.linalg.norm(ellbow_dir):
-            ellbow_dir = ellbow_dir / ellbow_norm
+            ellbow_dir = (
+                self.optitracks["wrist_r"].position
+                - self.optitracks["ellbow_r"].position
+            )
+            self[idx_body].pose.orientation = get_rotation_between_vectors(
+                [0.0, 0.0, 1.0],
+                ellbow_dir,
+            )
+
+            # Update optitracks to be in-between
+            if ellbow_norm := np.linalg.norm(ellbow_dir):
+                ellbow_dir = ellbow_dir / ellbow_norm
+            else:
+                ellbow_dir = np.array([0, 0, 1.0])
         else:
-            ellbow_dir = np.array([1.0, 0, 0])
+            self[idx_body].position = self.optitracks["forearm_r"].position
+            if self.optitracks["forearm_r"].orientation is None:
+                self[idx_body].orientation = Rotation.from_rotvec([0, 0, 0])
+            else:
+                self[idx_body].orientation = self.optitracks["forearm_r"].orientation
 
-        self.joints["ellbow_r"].position = (
-            self[idx_body].position - self[idx_body].axes_length[0] * 0.5 * ellbow_dir
+            ellbow_dir = self[idx_body].orientation.apply([0, 0, 1.0])
+
+        self.optitracks["ellbow_r"].position = (
+            self[idx_body].position - self.ellbow_joint_dist * ellbow_dir
         )
-        self.joints["wrist_r"].position = (
-            self[idx_body].position + self[idx_body].axes_length[0] * 0.5 * ellbow_dir
+        self.optitracks["wrist_r"].position = (
+            self[idx_body].position + self.ellbow_joint_dist * ellbow_dir
         )
 
     def update_upperarm(self):
         idx_body = self.get_obstacle_id_from_name("upperarm_r")
         if self.margin_upperarms is None:
             # Assume displacement of reference point along z-axis
-            self.margin_upperarms = (
-                self[idx_body].axes_length[2]
-                * 0.5
-                / LA.norm(self[idx_body].get_reference_point(in_global_frame=True))
+            self.margin_upperarms = self[idx_body].axes_length[2] * 0.5 - LA.norm(
+                self[idx_body].get_reference_point(in_global_frame=True)
             )
 
         self[idx_body].position = 0.5 * (
-            self.joints["shoulder_r"].position + self.joints["ellbow_r"].position
+            self.optitracks["shoulder_r"].position
+            + self.optitracks["ellbow_r"].position
         )
 
         vect_upper = (
-            self.joints["shoulder_r"].position - self.joints["ellbow_r"].position
+            self.optitracks["ellbow_r"].position
+            - self.optitracks["shoulder_r"].position
         )
         self[idx_body].pose.orientation = get_rotation_between_vectors(
-            [0.0, 0.0, 1.0], vect_upper
+            [0.0, 0.0, -1.0],
+            vect_upper,
         )
 
         # Update size of upperarm to fit in between
         self[idx_body].axes_length[2] = self.margin_upperarms * 2 + LA.norm(vect_upper)
-        reference_point = self[idx_body].get_reference_point(in_global_frame=True)
-        reference_point[2] = LA.norm(vect_upper)
-        self[idx_body].set_reference_point(reference_point, in_global_frame=False)
+
+        # Since we're changing the shape - we empty the cache
+        # maybe the cache could be reset partially.
+        self.visualization_handler.empty_obstacle_cache()
+
+        # reference_point = self[idx_body].get_reference_point(in_global_frame=True)
+        # # reference_point[2] = self[idx_body].center_position + LA.norm(vect_upper)
+        self[idx_body].set_reference_point(
+            self.optitracks["shoulder_r"].position, in_global_frame=True
+        )
 
     def update_using_optitrack(self, transform_to_robot_frame: bool = True) -> None:
         if self.pose_updater is not None:
@@ -335,15 +429,21 @@ class FlexiLimbHuman:
         else:
             self.new_object_poses = []
         self.indeces_measures = [oo.obs_id for oo in self.new_object_poses]
-        self.indeces_optitrack_tree = self.optitrack_indeces
+        # self.indeces_optitrack_tree = self.optitrack_indeces
 
         self.update_robot()
-        self.update_joints()
+        self.update_optitracks()
 
         self.update_body()
         # Forarm before upperarm, as we have a higher-collision likelihood (!)
+        # and the upperarm length gets updated depending on the forear position
         self.update_forearm()
         self.update_upperarm()
+
+        # Arm left - make just hang down - set assembe neck and head
+        for limb_name in ["upperarm_l", "forearm_l", "neck", "head"]:
+            idx_obs = self.get_obstacle_id_from_name(limb_name)
+            self.align_position_with_parent(idx_obs)
 
     def update_dynamic_obstacle(self, idx_obs: int, obs_measure: RigidBody):
         # Update position
@@ -442,3 +542,8 @@ class FlexiLimbHuman:
             )
 
         return np.min(gammas)
+
+
+if (__name__) == "__main__":
+    test_vector_rotation()
+    print("Tests successful.")

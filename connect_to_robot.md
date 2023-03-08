@@ -53,7 +53,7 @@ Split the window (`CTRL+b "`: horizontal / `CTRL+b %`: vertical) and switch wind
 
 e.g.
 ```sh
-python examples/example_optitrack_rviz.py
+python examples/example_nonlinear_controller.py
 ```
 
 ## Turn the Robot Off

@@ -31,7 +31,7 @@ class Pose3D:
     rotation: Rotation
 
     def transform_position_to_relative(self, position: np.ndarray) -> np.ndarray:
-        new_position = self.rotation.apply(position) + self.position
+        new_position = self.rotation.apply(position) - self.position
         return new_position
 
     def transform_orientation_to_relative(self, rotation: Rotation) -> Rotation:

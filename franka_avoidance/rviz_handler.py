@@ -112,6 +112,9 @@ class RvizHandler(Node):
 
         self.publisher_.publish(self.marker_array)
 
+    def empty_obstacle_cache(self):
+        self.marker_array = MarkerArray()
+
     def remove_all_obstacles(self):
         try:
             self.marker_array.markers = []
