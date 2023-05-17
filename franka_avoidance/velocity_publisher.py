@@ -2,7 +2,6 @@
 Publish a Velocity (as Wrench) for use in RViz.
 """
 import numpy as np
-from numpy import linalg
 from scipy.spatial.transform import Rotation
 
 import rclpy
@@ -13,7 +12,7 @@ from geometry_msgs.msg import PoseStamped
 
 
 def get_orientation_from_direction(direction: np.ndarray) -> np.ndarray:
-    if not (dir_norm := linalg.norm(direction)):
+    if not (dir_norm := np.linalg.norm(direction)):
         return Rotation.from_quat([1.0, 0, 0, 0.0])
     null_vector = np.array([1.0, 0, 0])
 
