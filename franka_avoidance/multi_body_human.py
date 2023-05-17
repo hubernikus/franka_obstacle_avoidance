@@ -20,10 +20,10 @@ from dynamic_obstacle_avoidance.obstacles import Obstacle
 from dynamic_obstacle_avoidance.obstacles import CuboidXd as Cuboid
 from dynamic_obstacle_avoidance.obstacles import EllipseWithAxes as Ellipse
 
-from roam.rigid_body import RigidBody
-from roam.multi_obstacle_avoider import MultiObstacleAvoider
-from roam.dynamics.circular_dynamics import SimpleCircularDynamics
-from roam.dynamics.projected_rotation_dynamics import (
+from nonlinear_avoidance.rigid_body import RigidBody
+from nonlinear_avoidance.multi_obstacle_avoider import MultiObstacleAvoider
+from nonlinear_avoidance.dynamics.circular_dynamics import SimpleCircularDynamics
+from nonlinear_avoidance.dynamics.projected_rotation_dynamics import (
     ProjectedRotationDynamics,
 )
 

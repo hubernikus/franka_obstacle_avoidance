@@ -8,8 +8,8 @@ from scipy.spatial.transform import Rotation
 
 from dynamic_obstacle_avoidance.obstacles import CuboidXd as Cuboid
 
-# from roam.controller import RotationalAvoider
-from roam.vector_rotation import VectorRotationXd
+# from nonlinear_avoidance.controller import RotationalAvoider
+from nonlinear_avoidance.vector_rotation import VectorRotationXd
 
 
 def fast_directional_addition(

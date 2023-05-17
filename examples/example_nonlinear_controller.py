@@ -26,9 +26,9 @@ from vartools.states import ObjectPose
 from vartools.directional_space import get_directional_weighted_sum
 
 
-from roam.dynamics import DynamicDynamics, SimpleCircularDynamics
-from roam.multi_obstacle_avoider import MultiObstacleAvoider
-from roam.dynamics.projected_rotation_dynamics import (
+from nonlinear_avoidance.dynamics import DynamicDynamics, SimpleCircularDynamics
+from nonlinear_avoidance.multi_obstacle_avoider import MultiObstacleAvoider
+from nonlinear_avoidance.dynamics.projected_rotation_dynamics import (
     ProjectedRotationDynamics,
 )
 
