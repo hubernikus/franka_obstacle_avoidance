@@ -11,6 +11,9 @@ from dynamic_obstacle_avoidance.obstacles import CuboidXd as Cuboid
 # from nonlinear_avoidance.controller import RotationalAvoider
 from nonlinear_avoidance.vector_rotation import VectorRotationXd
 
+# Type definitions
+Vector = np.ndarray
+
 
 def fast_directional_addition(
     vector1: np.ndarray,
@@ -119,6 +122,22 @@ class FrankaJointSpace:
             velocity_initial, velocity_avoidance
         )
         return vector_rotation.rotate(velocity_initial, rot_factor=weight_rotation)
+
+    def get_limit_avoidance_velocity_from_cartesian(self, twist, state):
+        """This function requires the control-library sr.CartesianTwist / sr.state.
+        The computation of the Jacobian should be outsourced / replicated."""
+        desired_joint_vel = np.linalg.lstsq(
+            state.jacobian.data(), twist.get_twist(), rcond=None
+        )[0]
+
+        desired_joint_vel = desired_joint_vel * 0.7  # Slow it down for testing
+
+        final_joint_velocity = self.joint_robot.get_limit_avoidance_velocity(
+            joint_position=state.joint_state.get_positions(),
+            joint_velocity=desired_joint_vel,
+            jacobian=state.jacobian.data(),
+        )
+        return final_joint_velocity
 
     def get_limit_avoidance_velocity(
         self,

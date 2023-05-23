@@ -17,7 +17,7 @@ make sure light is white, otherwise press black button
 ```sh
 cd ~/Documents/LASA/franka-lightweight-interface
 bash run-rt.sh
-franka_lightweight_interface 16 panda_ --sensitivity low --joint-damping off
+franka_lightweight_interface 17 panda_ --sensitivity low --joint-damping off
 ```
 
 4. Run Optitrack
@@ -78,7 +78,7 @@ Robot does not turn on:
 > Try press and release of red button.   
 > Unplug / replug the robot  
 > Try again  
-> (Otherwise ask maxime  
+> (Otherwise ask maxime)
 
 
 ## Run and recompile robot:

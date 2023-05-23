@@ -46,7 +46,7 @@ class Pose3D:
 class SimpleRobot(Node):
     def __init__(
         self,
-        robot_id: int = 16,
+        robot_id: int = 17,
         robot_base_frame: str = "panda_link0",
     ):
         super().__init__("robot_node")
@@ -90,7 +90,7 @@ class OptitrackInterface(Node):
     def __init__(
         self,
         tcp_socket: str = "tcp://0.0.0.0:5511",
-        robot_id: int = 16,
+        robot_id: int = 17,
         robot_base_frame: str = "panda_link0",
     ):
         if len(robot_base_frame):
