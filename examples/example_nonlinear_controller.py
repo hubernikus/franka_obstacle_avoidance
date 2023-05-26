@@ -41,6 +41,7 @@ from nonlinear_avoidance.dynamics.projected_rotation_dynamics import (
 from franka_avoidance.robot_interface import RobotZmqInterface as RobotInterface
 from franka_avoidance.franka_joint_space import FrankaJointSpace
 from franka_avoidance.velocity_publisher import VelocityPublisher
+from franka_avoidance.trajectory_publisher import TrajectoryPublisher
 
 
 def create_simulation_compliant_controller():
@@ -61,7 +62,7 @@ def create_realworld_compliant_controller():
     return ctrl
 
 
-def create_target_ds(target):
+def create_target_ds(target: sr.CartesianPose):
     ds = create_cartesian_ds(DYNAMICAL_SYSTEM_TYPE.POINT_ATTRACTOR)
     ds.set_parameter_value(
         "gain", [50.0, 50.0, 50.0, 5.0, 5.0, 5.0], sr.ParameterType.DOUBLE_ARRAY
@@ -96,7 +97,33 @@ def create_target_ds(target):
 #            )
 #            self.ctrl.set_parameter_value(
 #                "angular_damping", 2.0, sr.ParameterType.DOUBLE
-#            )
+#           )
+
+
+class LineFollowingOscillation:
+    # Currently this is only for ideal (path) following
+    # No continuity is considered
+    def __init__(self, range=[0.3, 0.4]):
+        self.range = range
+
+        self._direction = 1
+        self.step = 0.01
+
+    def evaluate(self, position):
+        if self._direction > 0:
+            position[0] += self.step
+            if position[1] > range[1]:
+                self._direction = -1
+
+        elif self._direction < 0:
+            position[0] -= self.step
+            if position[0] < range[0]:
+                self._direction = 1
+
+        else:
+            raise ValueError("Direction is not set.")
+
+        return position
 
 
 class NonlinearAvoidanceController(Node):
@@ -125,6 +152,7 @@ class NonlinearAvoidanceController(Node):
 
         # Get robot state to set up the target in the same frame
         while not (state := self.robot.get_state()) and rclpy.ok():
+            # breakpoint()
             print("Awaiting first robot-state.")
 
         if target is None:
@@ -139,20 +167,50 @@ class NonlinearAvoidanceController(Node):
             )
 
         self.ds = create_target_ds(target)
-        self.create_circular_dynamics()
-        self.create_obstacle_environment(margin_absolut = 0.2)
+        # self.create_circular_dynamics()
+        self.create_circular_conveyer_dynamics()
+        self.create_obstacle_environment(margin_absolut=0.2)
         # self.human_with_limbs = create_flexilimb_human()
-        
+
         robot_frame = "panda_link0"
         self.inital_velocity_publisher = VelocityPublisher("initial", robot_frame)
         self.rotated_velocity_publisher = VelocityPublisher("rotated", robot_frame)
+        self.initial_trajectory = TrajectoryPublisher(
+            self.dynamics.evaluate, "initial", robot_frame
+        )
+        # self.avoider_trajectory = TrajectoryPublisher(
+        #     self.avoider.evaluate, "initial", robot_frame
+        # )
 
         self.command = CommandMessage()
         # self.command.control_type = [ControlType.EFFORT.value]
         self.command.control_type = [ControlType.VELOCITY.value]
 
         self.timer = self.create_timer(period, self.controller_callback)
-        print("Finish init.")
+        print("Finish initialization.")
+
+    def create_circular_conveyer_dynamics(self):
+        self.center_pose = Pose(
+            np.array([0.5, 0.0, 0.2]),
+            orientation=Rotation.from_euler("x", 0.0),
+        )
+        self.dynamics = SimpleCircularDynamics(pose=self.center_pose, radius=0.0001)
+
+        self.it_center = 0
+
+    def update_center_linear(self, period: int = 100) -> None:
+        center1 = np.array([0.0, -0.3, 0.2])
+        center2 = np.array([0.0, -0.3, 0.4])
+
+        self.it_center += 1
+
+        progress = self.it_center % period
+        progress = abs(progress - period / 2) / period
+
+        center = center1 * (1 - progress) + center2 * progress
+        self.dynamics.pose.position = center
+
+        # TODO: update additional settings / centers
 
     def create_circular_dynamics(self):
         # Create circular - circular dynamics
@@ -162,12 +220,12 @@ class NonlinearAvoidanceController(Node):
         )
         pose_base = copy.deepcopy(self.center_pose)
         pose_base.position = pose_base.position
-        self.ds_of_base = SimpleCircularDynamics(pose=pose_base, radius=0.2)
+        self.dynamics = SimpleCircularDynamics(pose=pose_base, radius=0.2)
         # self.main_ds = SimpleCircularDynamics(pose=pose, radius=0.5)
 
         # self.dynamic_dynamics = DynamicDynamics(
         #     main_dynamics=self.main_ds,
-        #     dynamics_of_base=self.ds_of_base,
+        #     dynamics_of_base=self.dynamics
         #     frequency=freq,
         # )
         # self.dynamic_dynamics.time_step_of_base_movement = 1.0 / 10  # Try fast !
@@ -191,9 +249,9 @@ class NonlinearAvoidanceController(Node):
         )
 
         self.rotation_projector = ProjectedRotationDynamics(
-            attractor_position=self.ds_of_base.pose.position,
-            initial_dynamics=self.ds_of_base,
-            reference_velocity=lambda x: x - self.ds_of_base.pose.position,
+            attractor_position=self.dynamics.pose.position,
+            initial_dynamics=self.dynamics,
+            reference_velocity=lambda x: x - self.dynamics.pose.position,
         )
 
         self.container = MultiObstacleContainer()
@@ -201,7 +259,7 @@ class NonlinearAvoidanceController(Node):
 
         self.avoider = MultiObstacleAvoider(
             obstacle_container=self.container,
-            initial_dynamics=self.ds_of_base,
+            initial_dynamics=self.dynamics,
             convergence_dynamics=self.rotation_projector,
         )
 
@@ -230,6 +288,7 @@ class NonlinearAvoidanceController(Node):
     def controller_callback(self) -> None:
         state = self.robot.get_state()
         # self.human_with_limbs.update()
+        print("Getting state.")
 
         if not state:
             return
@@ -239,16 +298,23 @@ class NonlinearAvoidanceController(Node):
 
         # Compute Avoidance-DS
         position = state.ee_state.get_position()
-
-        desired_velocity = self.ds_of_base.evaluate(position)
+        # breakpoint()
+        desired_velocity = self.dynamics.evaluate(position)
         self.inital_velocity_publisher.publish(position, desired_velocity)
+
+        breakpoint()
+
+        self.initial_trajectory.publish(position)
 
         tic = time.perf_counter()
         # desired_velocity = self.avoider.evaluate(position)
-        desired_velocity = self.ds_of_base.evaluate(position)
+        desired_velocity = self.dynamics.evaluate(position)
         toc = time.perf_counter()
         print(f"Timer took: {toc - tic:0.4f} s")
         self.rotated_velocity_publisher.publish(position, desired_velocity)
+
+        # print("position", position)
+        # print("attractr", self.dynamics.pose.position)
 
         # One time-step of the base-system.
         if np.linalg.norm(desired_velocity) > self.max_velocity:
@@ -270,17 +336,32 @@ class NonlinearAvoidanceController(Node):
         #     joint_velocity=desired_joint_vel,
         #     jacobian=state.jacobian.data(),
         # )
-        final_joint_velocity = (
-            self.joint_robot.get_limit_avoidance_velocity_from_cartesian(
-                twist=twist,
-                state=state,
-            )
-        )
+        joint_velocity = np.linalg.lstsq(
+            state.jacobian.data(), twist.get_twist(), rcond=None
+        )[0]
 
-        if np.any(np.isnan(final_joint_velocity)):
+        # joint_velocity = self.joint_robot.get_limit_avoidance_velocity(
+        #     joint_position=state.joint_state.get_positions(),
+        #     joint_velocity=joint_velocity,
+        #     jacobian=state.jacobian.data(),
+        # )
+
+        max_velocity = 0.001
+        ind_high = np.abs(joint_velocity) > max_velocity
+        if np.any(ind_high):
+            # velocities = final_joint_velocity.get_velocities()
+            joint_velocity[ind_high] = np.copysign(
+                max_velocity, joint_velocity[ind_high]
+            )
+            # final_joint_velocity.set_velocities(velocities)
+
+        if np.any(np.isnan(joint_velocity)):
             breakpoint()  # For debugging
 
-        self.command.joint_state.set_velocities(final_joint_velocity)
+        if joint_velocity.shape[0] != 7:
+            breakpoint()  # For debugging
+
+        self.command.joint_state.set_velocities(joint_velocity)
         self.robot.send_command(self.command)
 
 
@@ -288,12 +369,10 @@ if __name__ == "__main__":
     print("Starting CartesianTwist controller ...")
     rclpy.init()
     # robot_interface = RobotInterface("*:1601", "*:1602")
-    # robot_id = 16
-    robot_id = 17
-    robot_interface = RobotInterface(f"*:{robot_id}01", f"*:{robot_id}02")
+    robot_interface = RobotInterface.from_id(17)
 
     controller = NonlinearAvoidanceController(
-        robot=robot_interface, freq=200, is_simulation=False
+        robot=robot_interface, freq=100, is_simulation=False
     )
 
     try:

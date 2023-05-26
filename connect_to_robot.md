@@ -15,14 +15,15 @@ make sure light is white, otherwise press black button
 
 3. Run franka lightweight docker.
 ```sh
-cd ~/Documents/LASA/franka-lightweight-interface
+cd ~/Code/franka-lightweight-interface
 bash run-rt.sh
 franka_lightweight_interface 17 panda_ --sensitivity low --joint-damping off
 ```
+Note that the franka_id=17 (in this case) changes depending on the robot.
 
 4. Run Optitrack
 ``` sh
-cd ~/Code/lukas/CITRIFIED/optitrack
+cd ~/Code/CITRIFIED/optitrack
 bash docker-run.sh
 ```
 #### Sanity check: 1 obstacle == 36 bytes
@@ -36,7 +37,7 @@ the information message `access control disabled, clients can connect from any h
 
 Go to franka_obstacle_avoidance directory and run docker:
 ``` sh
-cd ~/Code/lukas/franka_obstacle_avoidance
+cd ~/Code/franka_obstacle_avoidance
 bash docker-run.sh
 ```
 

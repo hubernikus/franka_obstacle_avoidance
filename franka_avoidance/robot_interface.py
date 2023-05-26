@@ -1,5 +1,4 @@
 import zmq
-
 from network_interfaces.zmq import network
 
 from rclpy.node import Node
@@ -18,31 +17,34 @@ class RobotZmqInterface(Node):
             super().__init__("robot_zmq_interface")
             self.publisher_ = self.create_publisher(JointState, "joint_states", 3)
 
-        self.__context = zmq.Context(1)
-        self.__subscriber = network.configure_subscriber(
-            self.__context, state_uri, True
-        )
-        self.__publisher = network.configure_publisher(
-            self.__context, command_uri, True
-        )
+        self._context = zmq.Context(1)
+        self._subscriber = network.configure_subscriber(self._context, state_uri, True)
+        self._publisher = network.configure_publisher(self._context, command_uri, True)
+
         self.state = network.StateMessage()
 
         self.robot_name = "franka"
         self.base_frame = "panda_link0"
 
+    @classmethod
+    def from_id(cls, robot_id: int):
+        return cls(f"*:{robot_id}01", f"*:{robot_id}02")
+
     def get_state(self):
         # Store states internally to publish via ROS2
-        state = network.receive_state(self.__subscriber)
+        state = network.receive_state(self._subscriber)
+
         if state is None:
             print("RobotZMQ: No state recieved.")
             return
 
         if self.do_ros_publish:
             self.ros2_run_publisher(state)
+
         return state
 
     def send_command(self, command: network.CommandMessage()):
-        network.send_command(command, self.__publisher)
+        network.send_command(command, self._publisher)
 
     def ros2_run_publisher(self, state):
         msg = JointState()

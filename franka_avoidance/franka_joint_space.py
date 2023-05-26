@@ -130,9 +130,7 @@ class FrankaJointSpace:
             state.jacobian.data(), twist.get_twist(), rcond=None
         )[0]
 
-        desired_joint_vel = desired_joint_vel * 0.7  # Slow it down for testing
-
-        final_joint_velocity = self.joint_robot.get_limit_avoidance_velocity(
+        final_joint_velocity = self.get_limit_avoidance_velocity(
             joint_position=state.joint_state.get_positions(),
             joint_velocity=desired_joint_vel,
             jacobian=state.jacobian.data(),
@@ -164,7 +162,6 @@ class FrankaJointSpace:
             return joint_velocity * joint_speed
 
         nullspace_direction = self.get_nullspace_direction(jacobian)
-
         nullspace_weight = np.dot(nullspace_direction, normal_direction)
 
         if nullspace_weight < 0:
