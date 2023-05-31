@@ -57,7 +57,7 @@ class JointSpaceController(Node):
 
     def controller_callback(self) -> None:
         state = self.robot.get_state()
-
+        print("Try again...")
         if not state:
             return
 
@@ -74,10 +74,11 @@ class JointSpaceController(Node):
 if __name__ == "__main__":
     print("Starting Joint Space ....")
     rclpy.init()
-    robot_interface = RobotInterface("*:1601", "*:1602")
+    # robot_interface = RobotInterface("*:1601", "*:1602")
+    robot_interface = RobotInterface.from_id(17)
 
     # Spin in a separate thread
-    controller = JointSpaceController(robot=robot_interface, freq=500)
+    controller = JointSpaceController(robot=robot_interface, freq=100)
 
     try:
         rclpy.spin(controller)

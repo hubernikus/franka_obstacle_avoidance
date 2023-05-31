@@ -83,7 +83,7 @@ RUN git clone -b v0.1.0 --single-branch https://github.com/aica-technology/frank
 
 WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance
 # Copy the local folder
-COPY --chown=${USER} examples examples
+COPY --chown=${USER} scripts scripts 
 COPY --chown=${USER} config config
 COPY --chown=${USER} launch launch
 COPY --chown=${USER} resource resource

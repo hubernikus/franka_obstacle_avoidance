@@ -73,6 +73,12 @@ def create_target_ds(target: sr.CartesianPose):
     return ds
 
 
+class CommandHandler:
+    def __init__(self, state):
+        self.state = state
+        raise NotImplementedError("Not implemented yet")
+
+
 # self.ctrl.set_parameter_value(
 #                "linear_principle_damping", 1.0, sr.ParameterType.DOUBLE
 #            )
@@ -156,7 +162,9 @@ class NonlinearAvoidanceController(Node):
             print("Awaiting first robot-state.")
 
         if target is None:
-            quat = np.array([0.0, 1.0, 0.0, 1.0])
+            # quat = np.array([0.0, 1.0, 0.0, 1.0])
+            # quat = np.array([1.0, 0.0, 0.0, 0.0])
+            quat = np.array([0.0, 0.0, 0.0, 1.0])
             quat = quat / np.linalg.norm(quat)
             # quat = np.array([0.0, 1.0, 0.0, 0.0])
             target = sr.CartesianPose(
@@ -182,10 +190,6 @@ class NonlinearAvoidanceController(Node):
         #     self.avoider.evaluate, "initial", robot_frame
         # )
 
-        self.command = CommandMessage()
-        # self.command.control_type = [ControlType.EFFORT.value]
-        self.command.control_type = [ControlType.VELOCITY.value]
-
         self.timer = self.create_timer(period, self.controller_callback)
         print("Finish initialization.")
 
@@ -194,7 +198,7 @@ class NonlinearAvoidanceController(Node):
             np.array([0.5, 0.0, 0.2]),
             orientation=Rotation.from_euler("x", 0.0),
         )
-        self.dynamics = SimpleCircularDynamics(pose=self.center_pose, radius=0.0001)
+        self.dynamics = SimpleCircularDynamics(pose=self.center_pose, radius=0.1)
 
         self.it_center = 0
 
@@ -285,10 +289,22 @@ class NonlinearAvoidanceController(Node):
             # final_velocity = self.avoider.evaluate(position)
             position[:, ii + 1] = position[:, ii + 1] + velocity * delta_time
 
+    def create_velocity_command(self, state) -> CommandMessage:
+        command = CommandMessage()
+        command.control_type = [ControlType.EFFORT.value]
+        # command.control_type = [ControlType.VELOCITY.value]
+
+        command.joint_state = state.joint_state
+        command.joint_state.set_torques(np.zeros(self.robot.dof))
+
+        return command
+
     def controller_callback(self) -> None:
+        alltic = time.perf_counter()
+
         state = self.robot.get_state()
         # self.human_with_limbs.update()
-        print("Getting state.")
+        # print("Getting state.")
 
         if not state:
             return
@@ -302,7 +318,7 @@ class NonlinearAvoidanceController(Node):
         desired_velocity = self.dynamics.evaluate(position)
         self.inital_velocity_publisher.publish(position, desired_velocity)
 
-        breakpoint()
+        # breakpoint()
 
         self.initial_trajectory.publish(position)
 
@@ -324,7 +340,6 @@ class NonlinearAvoidanceController(Node):
 
         twist.set_linear_velocity(desired_velocity)
 
-        self.command.joint_state = state.joint_state
         # desired_joint_vel = np.linalg.lstsq(
         #     state.jacobian.data(), twist.get_twist(), rcond=None
         # )[0]
@@ -346,7 +361,7 @@ class NonlinearAvoidanceController(Node):
         #     jacobian=state.jacobian.data(),
         # )
 
-        max_velocity = 0.001
+        max_velocity = 0.01
         ind_high = np.abs(joint_velocity) > max_velocity
         if np.any(ind_high):
             # velocities = final_joint_velocity.get_velocities()
@@ -361,8 +376,15 @@ class NonlinearAvoidanceController(Node):
         if joint_velocity.shape[0] != 7:
             breakpoint()  # For debugging
 
-        self.command.joint_state.set_velocities(joint_velocity)
-        self.robot.send_command(self.command)
+        command = self.create_velocity_command(state)
+        command.joint_state.set_velocities(joint_velocity)
+        breakpoint()
+        self.robot.send_command(command)
+
+        # print("Loop over")
+        alltoc = time.perf_counter()
+
+        print(f"All took: {(alltoc - alltic)*10000:0.2f} ms.")
 
 
 if __name__ == "__main__":
@@ -372,7 +394,10 @@ if __name__ == "__main__":
     robot_interface = RobotInterface.from_id(17)
 
     controller = NonlinearAvoidanceController(
-        robot=robot_interface, freq=100, is_simulation=False
+        # robot=robot_interface, freq=100, is_simulation=False
+        robot=robot_interface,
+        freq=50,
+        is_simulation=False,
     )
 
     try:

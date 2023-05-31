@@ -10,7 +10,7 @@ docker run \
 	   -v $HOME/.Xauthority:/home/ros2/.Xauthority \
 	   -v "$(pwd)"/launch:/home/ros2/ros2_ws/src/franka_avoidance/launch:rw \
 	   -v "$(pwd)"/config:/home/ros2/ros2_ws/src/franka_avoidance/config:rw \
-	   -v "$(pwd)"/examples:/home/ros2/ros2_ws/src/franka_avoidance/examples:rw \
+	   -v "$(pwd)"/scripts:/home/ros2/ros2_ws/src/franka_avoidance/scripts:rw \
 	   -v "$(pwd)"/franka_avoidance:/home/ros2/ros2_ws/src/franka_avoidance/franka_avoidance:rw \
 	   -v "$(pwd)"/../various_tools/vartools:/home/ros2/python/various_tools/vartools\
 	   -v "$(pwd)"/../nonlinear_obstacle_avoidance/scripts:/home/ros2/python/nonlinear_obstacle_avoidance/scripts:rw \

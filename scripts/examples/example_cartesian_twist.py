@@ -23,7 +23,7 @@ class CartesianSpaceController(Node):
         self,
         robot,
         freq: float = 100,
-        node_name="velocity_controller",
+        node_name="effort_controller",
         is_simulation: bool = True,
         target: Optional[sr.CartesianPose] = None,
     ):
@@ -101,7 +101,6 @@ class CartesianSpaceController(Node):
         )
 
         self.command.joint_state = state.joint_state
-
         # self.command_torques = sr.JointTorques(cartesian_command)
         # self.command.joint_state.set_torques(self.command_torques.get_torques())
         # print("torques", cartesian_command.get_torques())
@@ -113,23 +112,16 @@ class CartesianSpaceController(Node):
 if __name__ == "__main__":
     print("Starting CartesianTwist controller ...")
     rclpy.init()
-    # rospy.init_node("test", anonymous=True)
-    robot_interface = RobotInterface("*:1601", "*:1602")
+    # robot_interface = RobotInterface("*:1601", "*:1602")
+    robot_interface = RobotInterface.from_id(17)
 
-    # Spin in a separate thread
     controller = CartesianSpaceController(
         robot=robot_interface, freq=50, is_simulation=False
     )
 
-    # thread = threading.Thread(target=rclpy.spin, args=(controller,), daemon=True)
-    # thread.start()
-
     try:
-        # controller.run()
         rclpy.spin(controller)
-
     except KeyboardInterrupt:
         pass
 
     rclpy.shutdown()
-    # thread.join()
