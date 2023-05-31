@@ -41,8 +41,8 @@ class TrajectoryPublisher(Node):
 
             trajectory[:, ii + 1] = velocity * self.delta_time + trajectory[:, ii]
 
-            if not (ii + 1) % (self.it_max // 3):
-                print(f"Preparation Loop {ii} / {self.it_max}")
+            if not (ii + 1) % (self.it_max // 2):
+                print(f"Preparation Loop {ii + 1} / {self.it_max}")
 
         stamp = self.get_clock().now().to_msg()
         self.msg.header.stamp = stamp

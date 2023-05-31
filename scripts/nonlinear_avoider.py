@@ -124,12 +124,32 @@ class LineFollowingOscillation:
         elif self._direction < 0:
             position[0] -= self.step
             if position[0] < range[0]:
-                self._direction = 1
+                self._direction = 2
 
         else:
             raise ValueError("Direction is not set.")
 
         return position
+
+
+def create_cartesian_pose(
+    state, position: np.ndarray, orientation: Optional[np.ndarray] = None
+):
+    if orientation is None:
+        # Default pose is the robot pointing down
+        orientation = np.array([0.0, 1.0, 0.0, 0.0])
+    else:
+        # make sure it's normalized
+        orientation = orientation / np.linalg.norm(orientation)
+
+    new_pose = sr.CartesianPose(
+        state.ee_state.get_name(),
+        position,
+        orientation,
+        state.ee_state.get_reference_frame(),
+    )
+
+    return new_pose
 
 
 class NonlinearAvoidanceController(Node):
@@ -162,16 +182,11 @@ class NonlinearAvoidanceController(Node):
             print("Awaiting first robot-state.")
 
         if target is None:
-            # quat = np.array([0.0, 1.0, 0.0, 1.0])
-            # quat = np.array([1.0, 0.0, 0.0, 0.0])
-            quat = np.array([0.0, 0.0, 0.0, 1.0])
-            quat = quat / np.linalg.norm(quat)
-            # quat = np.array([0.0, 1.0, 0.0, 0.0])
-            target = sr.CartesianPose(
-                state.ee_state.get_name(),
-                np.array([0.3, 0.1, 0.8]),
-                quat,
-                state.ee_state.get_reference_frame(),
+            target = create_cartesian_pose(
+                state,
+                position=np.array([0.3, 0.1, 0.8]),
+                orientation=None,
+                # orientation=np.array([0.0, 1.0, 0.0, 0.0]),
             )
 
         self.ds = create_target_ds(target)
@@ -291,10 +306,10 @@ class NonlinearAvoidanceController(Node):
 
     def create_velocity_command(self, state) -> CommandMessage:
         command = CommandMessage()
-        command.control_type = [ControlType.EFFORT.value]
-        # command.control_type = [ControlType.VELOCITY.value]
+        #  command.control_type = [ControlType.EFFORT.value]
+        command.control_type = [ControlType.VELOCITY.value]
 
-        command.joint_state = state.joint_state
+        command.joint_state = copy.deepcopy(state.joint_state)
         command.joint_state.set_torques(np.zeros(self.robot.dof))
 
         return command
@@ -314,11 +329,8 @@ class NonlinearAvoidanceController(Node):
 
         # Compute Avoidance-DS
         position = state.ee_state.get_position()
-        # breakpoint()
         desired_velocity = self.dynamics.evaluate(position)
         self.inital_velocity_publisher.publish(position, desired_velocity)
-
-        # breakpoint()
 
         self.initial_trajectory.publish(position)
 
@@ -378,13 +390,13 @@ class NonlinearAvoidanceController(Node):
 
         command = self.create_velocity_command(state)
         command.joint_state.set_velocities(joint_velocity)
-        breakpoint()
         self.robot.send_command(command)
 
         # print("Loop over")
         alltoc = time.perf_counter()
 
         print(f"All took: {(alltoc - alltic)*10000:0.2f} ms.")
+        # breakpoint()
 
 
 if __name__ == "__main__":
