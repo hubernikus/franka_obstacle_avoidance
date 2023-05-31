@@ -25,7 +25,7 @@ class RobotZmqInterface(Node):
 
         self.robot_name = "franka"
         self.base_frame = "panda_link0"
-        self.dof = 7
+        self.DOF = 7
 
     @classmethod
     def from_id(cls, robot_id: int):

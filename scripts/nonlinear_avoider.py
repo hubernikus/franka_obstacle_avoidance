@@ -11,20 +11,15 @@ from scipy.spatial.transform import Rotation
 import rclpy
 from rclpy.node import Node
 
-from geometry_msgs.msg import PoseStamped
-from nav_msgs.msg import Path
-
 # LASA Libraries
 import state_representation as sr
-from controllers import create_cartesian_controller, CONTROLLER_TYPE
-from dynamical_systems import create_cartesian_ds, DYNAMICAL_SYSTEM_TYPE
 from network_interfaces.control_type import ControlType
 from network_interfaces.zmq.network import CommandMessage
+from dynamical_systems import create_cartesian_ds, DYNAMICAL_SYSTEM_TYPE
 
 # Custom libraries
 from vartools.states import Pose
 
-from vartools.directional_space import get_directional_weighted_sum
 
 from dynamic_obstacle_avoidance.obstacles import CuboidXd as Cuboid
 
@@ -42,68 +37,10 @@ from franka_avoidance.robot_interface import RobotZmqInterface as RobotInterface
 from franka_avoidance.franka_joint_space import FrankaJointSpace
 from franka_avoidance.velocity_publisher import VelocityPublisher
 from franka_avoidance.trajectory_publisher import TrajectoryPublisher
-
-
-def create_simulation_compliant_controller():
-    ctrl = create_cartesian_controller(CONTROLLER_TYPE.COMPLIANT_TWIST)
-    ctrl.set_parameter_value("linear_principle_damping", 1.0, sr.ParameterType.DOUBLE)
-    ctrl.set_parameter_value("linear_orthogonal_damping", 1.0, sr.ParameterType.DOUBLE)
-    ctrl.set_parameter_value("angular_stiffness", 0.5, sr.ParameterType.DOUBLE)
-    ctrl.set_parameter_value("angular_damping", 0.5, sr.ParameterType.DOUBLE)
-    return ctrl
-
-
-def create_realworld_compliant_controller():
-    ctrl = create_cartesian_controller(CONTROLLER_TYPE.COMPLIANT_TWIST)
-    ctrl.set_parameter_value("linear_principle_damping", 50.0, sr.ParameterType.DOUBLE)
-    ctrl.set_parameter_value("linear_orthogonal_damping", 50.0, sr.ParameterType.DOUBLE)
-    ctrl.set_parameter_value("angular_stiffness", 2.0, sr.ParameterType.DOUBLE)
-    ctrl.set_parameter_value("angular_damping", 3.0, sr.ParameterType.DOUBLE)
-    return ctrl
-
-
-def create_target_ds(target: sr.CartesianPose):
-    ds = create_cartesian_ds(DYNAMICAL_SYSTEM_TYPE.POINT_ATTRACTOR)
-    ds.set_parameter_value(
-        "gain", [50.0, 50.0, 50.0, 5.0, 5.0, 5.0], sr.ParameterType.DOUBLE_ARRAY
-    )
-    ds.set_parameter_value(
-        "attractor", target, sr.ParameterType.STATE, sr.StateType.CARTESIAN_POSE
-    )
-    return ds
-
-
-class CommandHandler:
-    def __init__(self, state):
-        self.state = state
-        raise NotImplementedError("Not implemented yet")
-
-
-# self.ctrl.set_parameter_value(
-#                "linear_principle_damping", 1.0, sr.ParameterType.DOUBLE
-#            )
-#            self.ctrl.set_parameter_value(
-#                "linear_orthogonal_damping", 1.0, sr.ParameterType.DOUBLE
-#            )
-#            self.ctrl.set_parameter_value(
-#                "angular_stiffness", 0.5, sr.ParameterType.DOUBLE
-#            )
-#            self.ctrl.set_parameter_value(
-#                "angular_damping", 0.5, sr.ParameterType.DOUBLE
-#            )
-#        else:
-#            self.ctrl.set_parameter_value(
-#                "linear_principle_damping", 50.0, sr.ParameterType.DOUBLE
-#            )
-#            self.ctrl.set_parameter_value(
-#                "linear_orthogonal_damping", 50.0, sr.ParameterType.DOUBLE
-#            )
-#            self.ctrl.set_parameter_value(
-#                "angular_stiffness", 2.0, sr.ParameterType.DOUBLE
-#            )
-#            self.ctrl.set_parameter_value(
-#                "angular_damping", 2.0, sr.ParameterType.DOUBLE
-#           )
+from franka_avoidance.controller_interface import (
+    VelocityCommandHandler,
+    ImpedanceCommandHandler,
+)
 
 
 class LineFollowingOscillation:
@@ -130,6 +67,17 @@ class LineFollowingOscillation:
             raise ValueError("Direction is not set.")
 
         return position
+
+
+def create_target_ds(target: sr.CartesianPose):
+    ds = create_cartesian_ds(DYNAMICAL_SYSTEM_TYPE.POINT_ATTRACTOR)
+    ds.set_parameter_value(
+        "gain", [50.0, 50.0, 50.0, 5.0, 5.0, 5.0], sr.ParameterType.DOUBLE_ARRAY
+    )
+    ds.set_parameter_value(
+        "attractor", target, sr.ParameterType.STATE, sr.StateType.CARTESIAN_POSE
+    )
+    return ds
 
 
 def create_cartesian_pose(
@@ -161,6 +109,8 @@ class NonlinearAvoidanceController(Node):
         freq: float = 100,
         node_name="nonlinear_avoidance_controller",
         is_simulation: bool = False,
+        # is_velocity_controller: bool = True,
+        is_velocity_controller: bool = False,
         target: Optional[sr.CartesianPose] = None,
     ):
         super().__init__(node_name)
@@ -171,10 +121,17 @@ class NonlinearAvoidanceController(Node):
         self.max_velocity = 0.25
         self.joint_robot = FrankaJointSpace()
 
-        if is_simulation:
-            self.ctrl = create_simulation_compliant_controller()
+        if is_velocity_controller:
+            self.command_handler = VelocityCommandHandler()
+        # Otherwise -> CartesianTwist
+        elif is_simulation:
+            self.command_handler = ImpedanceCommandHandler.create_simulation()
         else:
-            self.ctrl = create_realworld_compliant_controller()
+            print("Doing real-world impedance")
+            self.command_handler = ImpedanceCommandHandler.create_realworld()
+
+        # if True:
+        #    breakpoint()
 
         # Get robot state to set up the target in the same frame
         while not (state := self.robot.get_state()) and rclpy.ok():
@@ -217,9 +174,9 @@ class NonlinearAvoidanceController(Node):
 
         self.it_center = 0
 
-    def update_center_linear(self, period: int = 100) -> None:
-        center1 = np.array([0.0, -0.3, 0.2])
-        center2 = np.array([0.0, -0.3, 0.4])
+    def update_center_linear(self, period: int = 1000) -> None:
+        center1 = np.array([0.4, 0.0, 0.2])
+        center2 = np.array([0.8, 0.0, 0.2])
 
         self.it_center += 1
 
@@ -229,7 +186,7 @@ class NonlinearAvoidanceController(Node):
         center = center1 * (1 - progress) + center2 * progress
         self.dynamics.pose.position = center
 
-        # TODO: update additional settings / centers
+        # TODO: update additional settings / centers if necessary (!)
 
     def create_circular_dynamics(self):
         # Create circular - circular dynamics
@@ -237,6 +194,7 @@ class NonlinearAvoidanceController(Node):
             np.array([0.9, -0.2, 0.8]),
             orientation=Rotation.from_euler("y", -math.pi / 2),
         )
+
         pose_base = copy.deepcopy(self.center_pose)
         pose_base.position = pose_base.position
         self.dynamics = SimpleCircularDynamics(pose=pose_base, radius=0.2)
@@ -315,11 +273,7 @@ class NonlinearAvoidanceController(Node):
         return command
 
     def controller_callback(self) -> None:
-        alltic = time.perf_counter()
-
         state = self.robot.get_state()
-        # self.human_with_limbs.update()
-        # print("Getting state.")
 
         if not state:
             return
@@ -329,9 +283,10 @@ class NonlinearAvoidanceController(Node):
 
         # Compute Avoidance-DS
         position = state.ee_state.get_position()
+        self.update_center_linear()
         desired_velocity = self.dynamics.evaluate(position)
-        self.inital_velocity_publisher.publish(position, desired_velocity)
 
+        self.inital_velocity_publisher.publish(position, desired_velocity)
         self.initial_trajectory.publish(position)
 
         tic = time.perf_counter()
@@ -351,52 +306,10 @@ class NonlinearAvoidanceController(Node):
             )
 
         twist.set_linear_velocity(desired_velocity)
-
-        # desired_joint_vel = np.linalg.lstsq(
-        #     state.jacobian.data(), twist.get_twist(), rcond=None
-        # )[0]
-
-        # desired_joint_vel = desired_joint_vel * 0.7  # Slow it down for testing
-
-        # final_joint_velocity = self.joint_robot.get_limit_avoidance_velocity(
-        #     joint_position=state.joint_state.get_positions(),
-        #     joint_velocity=desired_joint_vel,
-        #     jacobian=state.jacobian.data(),
-        # )
-        joint_velocity = np.linalg.lstsq(
-            state.jacobian.data(), twist.get_twist(), rcond=None
-        )[0]
-
-        # joint_velocity = self.joint_robot.get_limit_avoidance_velocity(
-        #     joint_position=state.joint_state.get_positions(),
-        #     joint_velocity=joint_velocity,
-        #     jacobian=state.jacobian.data(),
-        # )
-
-        max_velocity = 0.01
-        ind_high = np.abs(joint_velocity) > max_velocity
-        if np.any(ind_high):
-            # velocities = final_joint_velocity.get_velocities()
-            joint_velocity[ind_high] = np.copysign(
-                max_velocity, joint_velocity[ind_high]
-            )
-            # final_joint_velocity.set_velocities(velocities)
-
-        if np.any(np.isnan(joint_velocity)):
-            breakpoint()  # For debugging
-
-        if joint_velocity.shape[0] != 7:
-            breakpoint()  # For debugging
-
-        command = self.create_velocity_command(state)
-        command.joint_state.set_velocities(joint_velocity)
-        self.robot.send_command(command)
-
-        # print("Loop over")
-        alltoc = time.perf_counter()
-
-        print(f"All took: {(alltoc - alltic)*10000:0.2f} ms.")
-        # breakpoint()
+        # self.command_handler.update_state(state)
+        self.command_handler.update_from_cartesian_twist(twist, state)
+        # self.command_handler.limit_joint_velocity(0.01)
+        self.robot.send_command(self.command_handler.get_command())
 
 
 if __name__ == "__main__":

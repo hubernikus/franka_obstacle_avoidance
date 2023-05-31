@@ -54,7 +54,7 @@ Split the window (`CTRL+b "`: horizontal / `CTRL+b %`: vertical) and switch wind
 
 e.g.
 ```sh
-python examples/example_nonlinear_controller.py
+python scripts/nonlinear_avoider.py
 ```
 
 ## Turn the Robot Off
