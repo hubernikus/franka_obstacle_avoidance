@@ -20,7 +20,6 @@ from dynamic_obstacle_avoidance.obstacles import EllipseWithAxes as Ellipse
 from dynamic_obstacle_avoidance.containers import ObstacleContainer
 
 from franka_avoidance.optitrack_interface import OptitrackInterface
-
 from franka_avoidance.state_filters import PositionFilter, SimpleOrientationFilter
 
 
@@ -111,10 +110,13 @@ class OptitrackContainer(ObstacleContainer):
             ].position + self.orientation_filters[idx].rotation.apply(
                 self.obstacle_offsets[idx].position
             )
-            self[idx].pose.orientation = (
-                self.orientation_filters[idx].rotation
-                * self.obstacle_offsets[idx].orientation
-            )
+            try:
+                self[idx].pose.orientation = (
+                    self.orientation_filters[idx].rotation
+                    * self.obstacle_offsets[idx].orientation
+                )
+            except:
+                breakpoint()
 
             # TODO: update velocity
 

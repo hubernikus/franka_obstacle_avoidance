@@ -13,6 +13,8 @@ docker run \
 	   -v "$(pwd)"/scripts:/home/ros2/ros2_ws/src/franka_avoidance/scripts:rw \
 	   -v "$(pwd)"/franka_avoidance:/home/ros2/ros2_ws/src/franka_avoidance/franka_avoidance:rw \
 	   -v "$(pwd)"/../various_tools/vartools:/home/ros2/python/various_tools/vartools\
+	   -v "$(pwd)"/../dynamic_obstacle_avoidance/dynamic_obstacle_avoidance:/home/ros2/python/dynamic_obstacle_avoidance/dynamic_obstacle_avoidance\
+	   -v "$(pwd)"/../dynamic_obstacle_avoidance/tests:/home/ros2/python/dynamic_obstacle_avoidance/tests\
 	   -v "$(pwd)"/../nonlinear_obstacle_avoidance/scripts:/home/ros2/python/nonlinear_obstacle_avoidance/scripts:rw \
 	   -v "$(pwd)"/../nonlinear_obstacle_avoidance/nonlinear_avoidance:/home/ros2/python/nonlinear_obstacle_avoidance/nonlinear_avoidance:rw \
 	   ros2_franka_avoidance

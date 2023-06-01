@@ -100,6 +100,7 @@ class OptitrackInterface(Node):
 
             self.robot_id = robot_id
             self.robot_base_frame = robot_base_frame
+
         else:
             # (Hopefully) not optitrack conform
             self.robot_id == -1

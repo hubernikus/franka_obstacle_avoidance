@@ -79,10 +79,10 @@ class ImpedanceCommandHandler:
     def create_realworld(cls):
         ctrl = create_cartesian_controller(CONTROLLER_TYPE.COMPLIANT_TWIST)
         ctrl.set_parameter_value(
-            "linear_principle_damping", 50.0, sr.ParameterType.DOUBLE
+            "linear_principle_damping", 70.0, sr.ParameterType.DOUBLE
         )
         ctrl.set_parameter_value(
-            "linear_orthogonal_damping", 50.0, sr.ParameterType.DOUBLE
+            "linear_orthogonal_damping", 60.0, sr.ParameterType.DOUBLE
         )
         ctrl.set_parameter_value("angular_stiffness", 2.0, sr.ParameterType.DOUBLE)
         ctrl.set_parameter_value("angular_damping", 3.0, sr.ParameterType.DOUBLE)

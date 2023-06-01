@@ -20,8 +20,8 @@ from dynamical_systems import create_cartesian_ds, DYNAMICAL_SYSTEM_TYPE
 # Custom libraries
 from vartools.states import Pose
 
-
 from dynamic_obstacle_avoidance.obstacles import CuboidXd as Cuboid
+from dynamic_obstacle_avoidance.obstacles import EllipseWithAxes as Ellipse
 
 from nonlinear_avoidance.dynamics import DynamicDynamics, SimpleCircularDynamics
 from nonlinear_avoidance.multi_obstacle import MultiObstacle
@@ -35,12 +35,49 @@ from nonlinear_avoidance.dynamics.projected_rotation_dynamics import (
 # from franka_avoidance.human_optitrack_container import create_optitrack_human
 from franka_avoidance.robot_interface import RobotZmqInterface as RobotInterface
 from franka_avoidance.franka_joint_space import FrankaJointSpace
+from franka_avoidance.rviz_handler import RvizHandler
 from franka_avoidance.velocity_publisher import VelocityPublisher
 from franka_avoidance.trajectory_publisher import TrajectoryPublisher
+from franka_avoidance.optitrack_container import OptitrackContainer
 from franka_avoidance.controller_interface import (
     VelocityCommandHandler,
     ImpedanceCommandHandler,
 )
+
+
+def create_conveyer_obstacles(margin_absolut=0.1):
+    obstacles = OptitrackContainer(use_optitrack=True)
+
+    # Conveyer Belt
+    obstacles.append(
+        Cuboid(
+            center_position=np.array([0.5, 0.0, -0.25]),
+            axes_length=np.array([0.5, 2.5, 0.8]),
+            margin_absolut=margin_absolut,
+        ),
+        obstacle_id=-2,  # Static
+    )
+
+    obstacles.append(
+        Cuboid(
+            center_position=np.array([0.0, 0, 0]),
+            axes_length=np.array([0.16, 0.16, 0.16]),
+            margin_absolut=margin_absolut,
+        ),
+        obstacle_id=1025,
+    )
+
+    obstacles.append(
+        Cuboid(
+            center_position=np.array([0.0, 0, 0]),
+            axes_length=np.array([0.26, 0.37, 0.24]),
+            margin_absolut=margin_absolut,
+        ),
+        obstacle_id=1026,
+    )
+
+    obstacles.visualization_handler = RvizHandler(obstacles)
+    return obstacles
 
 
 class LineFollowingOscillation:
@@ -112,13 +149,18 @@ class NonlinearAvoidanceController(Node):
         # is_velocity_controller: bool = True,
         is_velocity_controller: bool = False,
         target: Optional[sr.CartesianPose] = None,
+        obstacles: Optional[OptitrackContainer] = None,
     ):
         super().__init__(node_name)
         self.robot = robot
         self.rate = self.create_rate(freq)
         period = 1.0 / freq
 
-        self.max_velocity = 0.25
+        # self.max_linear_velocity = 0.25
+        # self.max_angular_velocity = 0.1
+        self.max_linear_velocity = 0.01
+        self.max_angular_velocity = 0.01
+
         self.joint_robot = FrankaJointSpace()
 
         if is_velocity_controller:
@@ -130,8 +172,7 @@ class NonlinearAvoidanceController(Node):
             print("Doing real-world impedance")
             self.command_handler = ImpedanceCommandHandler.create_realworld()
 
-        # if True:
-        #    breakpoint()
+        self.obstacles = obstacles
 
         # Get robot state to set up the target in the same frame
         while not (state := self.robot.get_state()) and rclpy.ok():
@@ -278,8 +319,11 @@ class NonlinearAvoidanceController(Node):
         if not state:
             return
 
+        if self.obstacles is not None:
+            self.obstacles.update()
+
         twist = sr.CartesianTwist(self.ds.evaluate(state.ee_state))
-        twist.clamp(self.max_velocity, 0.5)
+        twist.clamp(self.max_linear_velocity, self.max_angular_velocity)
 
         # Compute Avoidance-DS
         position = state.ee_state.get_position()
@@ -300,9 +344,11 @@ class NonlinearAvoidanceController(Node):
         # print("attractr", self.dynamics.pose.position)
 
         # One time-step of the base-system.
-        if np.linalg.norm(desired_velocity) > self.max_velocity:
+        if np.linalg.norm(desired_velocity) > self.max_linear_velocity:
             desired_velocity = (
-                desired_velocity / np.linalg.norm(desired_velocity) * self.max_velocity
+                desired_velocity
+                / np.linalg.norm(desired_velocity)
+                * self.max_linear_velocity
             )
 
         twist.set_linear_velocity(desired_velocity)
@@ -318,11 +364,14 @@ if __name__ == "__main__":
     # robot_interface = RobotInterface("*:1601", "*:1602")
     robot_interface = RobotInterface.from_id(17)
 
+    obstacles = create_conveyer_obstacles()
+
     controller = NonlinearAvoidanceController(
         # robot=robot_interface, freq=100, is_simulation=False
         robot=robot_interface,
         freq=50,
         is_simulation=False,
+        obstacles=obstacles,
     )
 
     try:
