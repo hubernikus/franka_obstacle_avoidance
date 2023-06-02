@@ -100,7 +100,6 @@ class OptitrackInterface(Node):
 
             self.robot_id = robot_id
             self.robot_base_frame = robot_base_frame
-
         else:
             # (Hopefully) not optitrack conform
             self.robot_id == -1
@@ -119,10 +118,12 @@ class OptitrackInterface(Node):
 
     def get_messages(self) -> list[RigidBody]:
         # print("[optitrack_interface] Collecting optitrack-data from zmq-server...")
+
         try:
             binary_data = self.socket.recv(flags=zmq.NOBLOCK)
         except zmq.error.Again:
             warnings.warn("No Optitrack recieved.")
+            # breakpoint()
             return []
 
         bodies = []
@@ -138,6 +139,7 @@ class OptitrackInterface(Node):
             rotation = Rotation.from_quat(
                 [body_array[6], body_array[7], body_array[8], body_array[5]]
             )
+
             if obs_id == self.robot_id:
                 self.publish_robot_transform(position, rotation)
 
@@ -146,6 +148,7 @@ class OptitrackInterface(Node):
 
             bodies.append(RigidBody(obs_id, position, rotation))
 
+        # breakpoint()
         return bodies
 
     def publish_robot_transform(self, position: np.ndarray, rotation: Rotation) -> None:

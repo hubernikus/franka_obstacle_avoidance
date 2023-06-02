@@ -21,9 +21,11 @@ from dynamical_systems import create_cartesian_ds, DYNAMICAL_SYSTEM_TYPE
 from vartools.states import Pose
 
 from dynamic_obstacle_avoidance.obstacles import CuboidXd as Cuboid
-from dynamic_obstacle_avoidance.obstacles import EllipseWithAxes as Ellipse
 
-from nonlinear_avoidance.dynamics import DynamicDynamics, SimpleCircularDynamics
+# from dynamic_obstacle_avoidance.obstacles import EllipseWithAxes as Ellipse
+
+from nonlinear_avoidance.dynamics import DynamicDynamics
+from nonlinear_avoidance.dynamics import SimpleCircularDynamics
 from nonlinear_avoidance.multi_obstacle import MultiObstacle
 from nonlinear_avoidance.multi_obstacle_avoider import MultiObstacleAvoider
 from nonlinear_avoidance.multi_obstacle_container import MultiObstacleContainer
@@ -45,39 +47,73 @@ from franka_avoidance.controller_interface import (
 )
 
 
-def create_conveyer_obstacles(margin_absolut=0.1):
-    obstacles = OptitrackContainer(use_optitrack=True)
+def create_conveyer_obstacles(margin_absolut=0.1, distance_scaling=10.0):
+    optitrack_obstacles = OptitrackContainer(use_optitrack=True)
 
-    # Conveyer Belt
-    obstacles.append(
+    # Conveyer Belt [static]
+    conveyer_belt = MultiObstacle(Pose.create_trivial(dimension=3))
+    conveyer_belt.set_root(
         Cuboid(
             center_position=np.array([0.5, 0.0, -0.25]),
             axes_length=np.array([0.5, 2.5, 0.8]),
             margin_absolut=margin_absolut,
-        ),
-        obstacle_id=-2,  # Static
+            distance_scaling=distance_scaling,
+        )
     )
 
-    obstacles.append(
+    optitrack_obstacles.append(conveyer_belt, obstacle_id=-2)
+
+    box1 = MultiObstacle(Pose.create_trivial(dimension=3))
+    box1.set_root(
         Cuboid(
-            center_position=np.array([0.0, 0, 0]),
+            center_position=np.array([0.0, 0, -0.06]),
             axes_length=np.array([0.16, 0.16, 0.16]),
             margin_absolut=margin_absolut,
-        ),
-        obstacle_id=1025,
+            distance_scaling=distance_scaling,
+        )
     )
+    box1[-1].set_reference_point(np.array([0.0, 0.0, -0.08]), in_global_frame=False)
+    optitrack_obstacles.append(box1, obstacle_id=1025)
 
-    obstacles.append(
+    box2 = MultiObstacle(Pose.create_trivial(dimension=3))
+    box2.set_root(
         Cuboid(
-            center_position=np.array([0.0, 0, 0]),
+            center_position=np.array([0.0, 0, -0.12]),
             axes_length=np.array([0.26, 0.37, 0.24]),
             margin_absolut=margin_absolut,
-        ),
-        obstacle_id=1026,
+            distance_scaling=distance_scaling,
+        )
     )
+    box2[-1].set_reference_point(np.array([0.0, 0.0, -0.12]), in_global_frame=False)
+    optitrack_obstacles.append(box2, obstacle_id=1026)
 
-    obstacles.visualization_handler = RvizHandler(obstacles)
-    return obstacles
+    # optitrack_obstacles.visualization_handler = RvizHandler(optitrack_obstacles)
+    return optitrack_obstacles
+
+
+def create_rviz_handler(optitrack_obstacles):
+    rviz_handler = RvizHandler(base_frame="panda_link0")
+    cardboard_color = (0.8, 0.4, 0.4, 1.0)
+    colors = [(0.4, 0.5, 0.4, 1.0), cardboard_color, cardboard_color]
+    # rviz_handler = RvizHandler(base_frame="world")
+    rviz_handler.create_multi_obstacles(
+        optitrack_obstacles, optitrack_obstacles.obstacle_ids, colors=colors
+    )
+    return rviz_handler
+
+
+def create_avoider(dynamics, optitrack_obstacles):
+    # Transform to MultiObbstacleContainer and create avoider
+    container = MultiObstacleContainer()
+    for obs in optitrack_obstacles:
+        container.append(obs)
+
+    avoider = MultiObstacleAvoider(
+        initial_dynamics=dynamics,
+        obstacle_container=container,
+        create_convergence_dynamics=True,
+    )
+    return avoider
 
 
 class LineFollowingOscillation:
@@ -149,7 +185,7 @@ class NonlinearAvoidanceController(Node):
         # is_velocity_controller: bool = True,
         is_velocity_controller: bool = False,
         target: Optional[sr.CartesianPose] = None,
-        obstacles: Optional[OptitrackContainer] = None,
+        optitrack_obstacles: Optional[OptitrackContainer] = None,
     ):
         super().__init__(node_name)
         self.robot = robot
@@ -172,11 +208,8 @@ class NonlinearAvoidanceController(Node):
             print("Doing real-world impedance")
             self.command_handler = ImpedanceCommandHandler.create_realworld()
 
-        self.obstacles = obstacles
-
         # Get robot state to set up the target in the same frame
         while not (state := self.robot.get_state()) and rclpy.ok():
-            # breakpoint()
             print("Awaiting first robot-state.")
 
         if target is None:
@@ -190,8 +223,12 @@ class NonlinearAvoidanceController(Node):
         self.ds = create_target_ds(target)
         # self.create_circular_dynamics()
         self.create_circular_conveyer_dynamics()
-        self.create_obstacle_environment(margin_absolut=0.2)
+        # self.create_obstacle_environment(margin_absolut=0.2)
         # self.human_with_limbs = create_flexilimb_human()
+
+        self.optitrack_obstacles = optitrack_obstacles
+        self.rviz_handler = create_rviz_handler(self.optitrack_obstacles)
+        self.avoider = create_avoider(self.dynamics, self.optitrack_obstacles)
 
         robot_frame = "panda_link0"
         self.inital_velocity_publisher = VelocityPublisher("initial", robot_frame)
@@ -199,16 +236,16 @@ class NonlinearAvoidanceController(Node):
         self.initial_trajectory = TrajectoryPublisher(
             self.dynamics.evaluate, "initial", robot_frame
         )
-        # self.avoider_trajectory = TrajectoryPublisher(
-        #     self.avoider.evaluate, "initial", robot_frame
-        # )
+        self.avoider_trajectory = TrajectoryPublisher(
+            self.avoider.evaluate, "avoider", robot_frame
+        )
 
         self.timer = self.create_timer(period, self.controller_callback)
         print("Finish initialization.")
 
     def create_circular_conveyer_dynamics(self):
         self.center_pose = Pose(
-            np.array([0.5, 0.0, 0.2]),
+            np.array([0.5, 0.0, 0.3]),
             orientation=Rotation.from_euler("x", 0.0),
         )
         self.dynamics = SimpleCircularDynamics(pose=self.center_pose, radius=0.1)
@@ -319,8 +356,13 @@ class NonlinearAvoidanceController(Node):
         if not state:
             return
 
-        if self.obstacles is not None:
-            self.obstacles.update()
+        if self.optitrack_obstacles is not None:
+            self.optitrack_obstacles.update()
+            # self.avoider.obstacle_container.update_obstacle_pose()
+            if self.rviz_handler is not None:
+                self.rviz_handler.update_multi_obstacle(
+                    self.optitrack_obstacles, self.optitrack_obstacles.obstacle_ids
+                )
 
         twist = sr.CartesianTwist(self.ds.evaluate(state.ee_state))
         twist.clamp(self.max_linear_velocity, self.max_angular_velocity)
@@ -332,6 +374,7 @@ class NonlinearAvoidanceController(Node):
 
         self.inital_velocity_publisher.publish(position, desired_velocity)
         self.initial_trajectory.publish(position)
+        self.avoider_trajectory.publish(position)
 
         tic = time.perf_counter()
         # desired_velocity = self.avoider.evaluate(position)
@@ -364,14 +407,14 @@ if __name__ == "__main__":
     # robot_interface = RobotInterface("*:1601", "*:1602")
     robot_interface = RobotInterface.from_id(17)
 
-    obstacles = create_conveyer_obstacles()
+    optitrack_obstacles = create_conveyer_obstacles()
 
     controller = NonlinearAvoidanceController(
         # robot=robot_interface, freq=100, is_simulation=False
         robot=robot_interface,
         freq=50,
         is_simulation=False,
-        obstacles=obstacles,
+        optitrack_obstacles=optitrack_obstacles,
     )
 
     try:

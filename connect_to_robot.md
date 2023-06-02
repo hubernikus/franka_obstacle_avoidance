@@ -19,7 +19,7 @@ cd ~/Code/franka-lightweight-interface
 bash run-rt.sh
 franka_lightweight_interface 17 panda_ --sensitivity low --joint-damping off
 ```
-Note that the franka_id=17 (in this case) changes depending on the robot.
+Note that the franka_id=17 (in this case) changes depending on the robot, by default it's 16
 
 4. Run Optitrack
 ``` sh
