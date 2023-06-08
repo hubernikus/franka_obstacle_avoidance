@@ -420,7 +420,7 @@ class NonlinearAvoidanceController(Node):
         self.ee_pose = msg.pose
 
     def controller_callback(self) -> None:
-        toc_loop = time.perf_counter()
+        tic_loop = time.perf_counter()
 
         if not self.use_twist_repeater:
             state = self.robot.get_state()
@@ -433,11 +433,13 @@ class NonlinearAvoidanceController(Node):
             ee_state = sr.CartesianPose(
                 name="current", reference_frame=self.robot_frame
             )
+
             ee_state.set_position(
                 self.ee_pose.position.x,
                 self.ee_pose.position.y,
                 self.ee_pose.position.z,
             )
+
             ee_state.set_orientation(
                 [
                     self.ee_pose.orientation.w,
@@ -446,8 +448,6 @@ class NonlinearAvoidanceController(Node):
                     self.ee_pose.orientation.z,
                 ]
             )
-            # Sanity check
-            # qq = ee_state.get_orientation()
 
         if self.optitrack_obstacles is not None:
             self.optitrack_obstacles.update()
@@ -468,17 +468,16 @@ class NonlinearAvoidanceController(Node):
                 ]
             )
 
-        self.update_center_linear()
+        # self.update_center_linear()
 
         desired_velocity = self.dynamics.evaluate(ee_position)
         self.inital_velocity_publisher.publish(ee_position, desired_velocity)
         self.initial_trajectory.publish(ee_position)
-
         # (! WARNING) This might slow down the control loop
-        # self.avoider_trajectory.publish(position)
+        self.avoider_trajectory.publish(ee_position)
 
         tic = time.perf_counter()
-        avoidance_velocity = self.avoider.evaluate_sequence(ee_position)
+        desired_velocity = self.avoider.evaluate_sequence(ee_position)
         # time.sleep(0.03)
         toc = time.perf_counter()
         print(f"Avoider took: {toc - tic:0.4f} s")
@@ -488,20 +487,14 @@ class NonlinearAvoidanceController(Node):
             print("position", ee_position)
             print("desired_velocity", desired_velocity)
 
-        # Compute Avoidance-DS
+        # DON"T MOVE (
+        desired_velocity = np.zeros(3)
+        # Transfer to twist message
         twist = sr.CartesianTwist(self.ds.evaluate(ee_state))
         twist.set_linear_velocity(desired_velocity)
         twist.clamp(self.max_linear_velocity, self.max_angular_velocity)
 
         self.rotated_velocity_publisher.publish(ee_position, desired_velocity)
-
-        # One time-step of the base-system.
-        # if np.linalg.norm(desired_velocity) > self.max_linear_velocity:
-        #     desired_velocity = (
-        #         desired_velocity
-        #         / np.linalg.norm(desired_velocity)
-        #         * self.max_linear_velocity
-        #     )
 
         if self.use_twist_repeater:
             self.publish_twist(twist)
@@ -511,7 +504,8 @@ class NonlinearAvoidanceController(Node):
             self.robot.send_command(self.command_handler.get_command())
 
         toc_loop = time.perf_counter()
-        print(f"Full loop took: {toc_loop - tic:0.4f} s")
+        # breakpoint()
+        print(f"Full loop took: {toc_loop - tic_loop:0.4f} s")
 
 
 if __name__ == "__main__":

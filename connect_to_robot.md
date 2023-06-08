@@ -57,6 +57,11 @@ e.g.
 python scripts/nonlinear_avoider.py
 ```
 
+To have a (compliant) control storer:
+``` sh
+python franka_avoidance/control_repeater.py
+```
+
 ## Turn the Robot Off
 1. Make sure 'emergency lock' is on
 2. Go to the web-portal 
@@ -96,6 +101,8 @@ aica-docker interactive learning-safety-margin:noetic -u ros --net host --no-hos
 roslaunch learning_safety_margin demo.launch demo:=idle_control
 
 Terminal 2
+```
 cd ~/Documents/LASA/franka-lightweight-interface
 bash run-rt.sh 
 franka_lightweight_interface 16 panda_ --sensitivity low --joint-damping off
+```

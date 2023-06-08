@@ -110,7 +110,7 @@ class TwistRepeater(Node):
         raise KeyboardInterrupt
 
     def shutdown(self) -> None:
-        # TODO: instead of direct shutdown, publish zero twist (?)
+        # TODO: This still leads to weird behavior / unnexpected accelerations
         # Publish zero twist
         self.set_zero_twist()
 
