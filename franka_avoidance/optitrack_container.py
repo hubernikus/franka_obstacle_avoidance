@@ -127,7 +127,8 @@ class OptitrackContainer(ObstacleContainer):
 
             if self.fixed_robot_position:
                 # Callibration is done such that the robot position is fixed (!) [the offset is hard coded]
-                robot_position = np.array([0.0, -0.43, 0.0])
+                # robot_position = np.array([0.0, -0.43, 0.0])
+                robot_position = np.array([0.0, 0.2, 0.0])
                 self[idx].pose.position = self[idx].pose.position - robot_position
 
             elif self.optitrack_interface.robot_body is not None:
