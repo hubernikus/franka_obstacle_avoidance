@@ -130,6 +130,7 @@ class OptitrackContainer(ObstacleContainer):
                 # robot_position = np.array([0.0, -0.43, 0.0])
                 robot_position = np.array([0.0, 0.2, 0.0])
                 self[idx].pose.position = self[idx].pose.position - robot_position
+                self[idx].linear_velocity = self.position_filters[idx].velocity
 
             elif self.optitrack_interface.robot_body is not None:
                 # TODO: verify that this is really correct....
@@ -156,6 +157,7 @@ class OptitrackContainer(ObstacleContainer):
                 # self.visualization_handler.base_frame = "panda_link0"
                 # Make sure pose of children is correctly updated for 'multi-obstacles'
                 # TODO: update velocity to frame of reference
+                # print('opti vel', self.position_filters[idx].velocity)
 
             if hasattr(self[idx], "update_pose"):
                 self[idx].update_pose(self[idx].pose)

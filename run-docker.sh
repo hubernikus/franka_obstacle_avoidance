@@ -9,7 +9,7 @@ docker run \
 	   -v /tmp/.X11-unix:/tmp/.X11-unix \
 	   -v $HOME/.Xauthority:/home/ros2/.Xauthority \
 	   -v "$(pwd)"/launch:/home/ros2/ros2_ws/src/franka_avoidance/launch:rw \
-	   -v "$(pwd)"/config:/home/ros2/ros2_ws/src/franka_avoidance/config:rw \
+	   -v "$(pwd)"/config:/home/ros2/config:rw \
 	   -v "$(pwd)"/scripts:/home/ros2/ros2_ws/src/franka_avoidance/scripts:rw \
 	   -v "$(pwd)"/franka_avoidance:/home/ros2/ros2_ws/src/franka_avoidance/franka_avoidance:rw \
 	   -v "$(pwd)"/../various_tools/vartools:/home/ros2/python/various_tools/vartools\

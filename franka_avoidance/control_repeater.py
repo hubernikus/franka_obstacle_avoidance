@@ -185,7 +185,6 @@ class TwistRepeater(Node):
 
         # print("twist", self.twist_command)
         self.command_handler.update_from_cartesian_twist(self.twist_command, state)
-
         # print("command", self.command_handler.get_command())
         self.robot.send_command(self.command_handler.get_command())
 

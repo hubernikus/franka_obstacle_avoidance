@@ -47,7 +47,6 @@ class RvizHandler(Node):
 
     @base_frame.setter
     def base_frame(self, value: str) -> None:
-        breakpoint()
         self._base_frame = value
 
         for marker in self.marker_array.markers:
@@ -116,11 +115,12 @@ class RvizHandler(Node):
                 else:
                     color = colors[tt]
 
-                self.marker_array.markers.append(
-                    self.create_marker_obstacle(component, obstacle_ids[tt], color)
-                )
-                self.id_dict[obstacle_ids[tt], cc] = len(self.marker_array.markers) - 1
+                id_obs = len(self.marker_array.markers)
 
+                self.marker_array.markers.append(
+                    self.create_marker_obstacle(component, id_obs, color)
+                )
+                self.id_dict[obstacle_ids[tt], cc] = id_obs
                 # self.pose_array.poses.append(PoseStamped)
         # Do poses, too
 
@@ -150,6 +150,7 @@ class RvizHandler(Node):
         for tt, tree in enumerate(obstacle_container):
             for cc, component in enumerate(tree):
                 it_id = self.id_dict[obstacle_ids[tt], cc]
+
                 self.update_marker(component.pose, it_id)
 
         self.publisher_.publish(self.marker_array)

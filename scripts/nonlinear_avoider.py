@@ -40,6 +40,7 @@ from franka_avoidance.robot_interface import RobotZmqInterface as RobotInterface
 from franka_avoidance.franka_joint_space import FrankaJointSpace
 from franka_avoidance.rviz_handler import RvizHandler
 from franka_avoidance.velocity_publisher import VelocityPublisher
+from franka_avoidance.velocity_publisher import PointPublisher
 from franka_avoidance.trajectory_publisher import TrajectoryPublisher
 from franka_avoidance.optitrack_container import OptitrackContainer
 from franka_avoidance.controller_interface import (
@@ -48,7 +49,7 @@ from franka_avoidance.controller_interface import (
 )
 
 
-def create_conveyer_obstacles(margin_absolut=0.1, distance_scaling=10.0):
+def create_conveyer_obstacles(margin_absolut=0.2, distance_scaling=10.0):
     print(f"Create environment with")
     print(f"margin={margin_absolut}")
     print(f"scaling={distance_scaling}")
@@ -60,9 +61,10 @@ def create_conveyer_obstacles(margin_absolut=0.1, distance_scaling=10.0):
     conveyer_belt.set_root(
         Cuboid(
             center_position=np.array([0.5, 0.0, -0.25]),
-            axes_length=np.array([0.5, 2.5, 0.8]),
-            margin_absolut=margin_absolut,
-            distance_scaling=distance_scaling,
+            axes_length=np.array([0.5, 4.0, 0.8]),
+            # Conveyer has a fixed margin as it's from below
+            margin_absolut=0.05,
+            distance_scaling=20.0,
         )
     )
 
@@ -83,11 +85,21 @@ def create_conveyer_obstacles(margin_absolut=0.1, distance_scaling=10.0):
     box2 = MultiObstacle(Pose.create_trivial(dimension=3))
     box2.set_root(
         Cuboid(
-            center_position=np.array([0.0, 0, -0.12]),
-            axes_length=np.array([0.26, 0.37, 0.24]),
+            center_position=np.array([0.0, 0, -0.34]),
+            axes_length=np.array([0.20, 0.12, 0.24]),
             margin_absolut=margin_absolut,
             distance_scaling=distance_scaling,
         )
+    )
+    box2.add_component(
+        Cuboid(
+            center_position=np.array([0.0, 0, -0.1]),
+            axes_length=np.array([0.26, 0.37, 0.24]),
+            margin_absolut=margin_absolut,
+            distance_scaling=distance_scaling,
+        ),
+        parent_ind=0,
+        reference_position=np.array([0.0, 0.0, -0.12]),
     )
     box2[-1].set_reference_point(np.array([0.0, 0.0, -0.12]), in_global_frame=False)
     optitrack_obstacles.append(box2, obstacle_id=1026)
@@ -153,7 +165,10 @@ def create_avoider(dynamics, optitrack_obstacles):
         initial_dynamics=dynamics,
         obstacle_container=container,
         create_convergence_dynamics=True,
+        convergence_radius=math.pi * 0.6,
     )
+    print(f"Convergence radius: {avoider.convergence_radius / math.pi: .2f} pi")
+
     return avoider
 
 
@@ -202,7 +217,9 @@ def create_cartesian_pose(
 ):
     if orientation is None:
         # Default pose is the robot pointing down
-        orientation = np.array([0.0, 1.0, 0.0, 0.0])
+        # orientation = np.array([0.0, 1.0, 0.0, 0.0])
+        # orientation = np.array([0.0, 0.316, 0.948, 0.0])
+        orientation = np.array([0, 0.707, 0.707, 0.0])
     else:
         # make sure it's normalized
         orientation = orientation / np.linalg.norm(orientation)
@@ -244,7 +261,7 @@ class NonlinearAvoidanceController(Node):
 
         # self.max_linear_velocity = 0.25
         # self.max_angular_velocity = 0.1
-        self.max_linear_velocity = 0.15
+        self.max_linear_velocity = 0.25
         self.max_angular_velocity = 0.1
 
         self.joint_robot = FrankaJointSpace()
@@ -313,12 +330,14 @@ class NonlinearAvoidanceController(Node):
 
         self.inital_velocity_publisher = VelocityPublisher("initial", robot_frame)
         self.rotated_velocity_publisher = VelocityPublisher("rotated", robot_frame)
+
         self.initial_trajectory = TrajectoryPublisher(
             self.dynamics.evaluate, "initial", robot_frame
         )
         self.avoider_trajectory = TrajectoryPublisher(
             self.avoider.evaluate_sequence, "avoider", robot_frame
         )
+        self.point_publisher = PointPublisher("dynamcis_center", robot_frame)
 
         self.timer = self.create_timer(period, self.controller_callback)
         print("Finish initialization.")
@@ -334,6 +353,9 @@ class NonlinearAvoidanceController(Node):
 
         center = center1 * (1 - progress) + center2 * progress
         self.dynamics.pose.position[:2] = center
+
+        # Publish center
+        self.point_publisher.publish(self.dynamics.pose.position)
 
         # TODO: update additional settings / centers if necessary (!)
 
@@ -468,13 +490,14 @@ class NonlinearAvoidanceController(Node):
                 ]
             )
 
-        # self.update_center_linear()
+        self.update_center_linear()
 
         desired_velocity = self.dynamics.evaluate(ee_position)
         self.inital_velocity_publisher.publish(ee_position, desired_velocity)
-        self.initial_trajectory.publish(ee_position)
+
+        # self.initial_trajectory.publish(ee_position)
         # (! WARNING) This might slow down the control loop
-        self.avoider_trajectory.publish(ee_position)
+        # self.avoider_trajectory.publish(ee_position)
 
         tic = time.perf_counter()
         desired_velocity = self.avoider.evaluate_sequence(ee_position)
@@ -482,13 +505,14 @@ class NonlinearAvoidanceController(Node):
         toc = time.perf_counter()
         print(f"Avoider took: {toc - tic:0.4f} s")
 
-        print_states = True
+        print_states = False
         if print_states:
             print("position", ee_position)
             print("desired_velocity", desired_velocity)
 
         # DON"T MOVE (
-        desired_velocity = np.zeros(3)
+        # desired_velocity = np.zeros(3)
+
         # Transfer to twist message
         twist = sr.CartesianTwist(self.ds.evaluate(ee_state))
         twist.set_linear_velocity(desired_velocity)
@@ -513,6 +537,7 @@ if __name__ == "__main__":
     rclpy.init()
 
     optitrack_obstacles = create_conveyer_obstacles()
+
     use_twist_repeater = True
     if use_twist_repeater:
         robot_interface = None
