@@ -35,8 +35,8 @@ class RvizHandler(Node):
         # self.timer = self.create_timer(timer_period, self.timer_callback)
         # self.ii = 0
 
-        self._base_frame = base_frame
         self.marker_array = MarkerArray()
+        self.base_frame = base_frame
 
         self.id_dict = {}
         # self.update(obstacles, obstacle_ids)
@@ -47,6 +47,9 @@ class RvizHandler(Node):
 
     @base_frame.setter
     def base_frame(self, value: str) -> None:
+        if not isinstance(value, str):
+            raise ValueError("Wrong type")
+
         self._base_frame = value
 
         for marker in self.marker_array.markers:

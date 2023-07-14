@@ -38,7 +38,7 @@ the information message `access control disabled, clients can connect from any h
 Go to franka_obstacle_avoidance directory and run docker:
 ``` sh
 cd ~/Code/franka_obstacle_avoidance
-bash docker-run.sh
+bash run-docker.sh
 ```
 
 In the docker-terminal run:

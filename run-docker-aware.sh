@@ -9,16 +9,20 @@ docker run \
 	   -v /tmp/.X11-unix:/tmp/.X11-unix \
 	   -v $HOME/.Xauthority:/home/ros2/.Xauthority \
 	   -v "$(pwd)"/launch:/home/ros2/ros2_ws/src/franka_avoidance/launch:rw \
-	   -v "$(pwd)"/config:/home/ros2/ros2_ws/src/franka_avoidance/config:rw \
-	   -v "$(pwd)"/examples:/home/ros2/ros2_ws/src/franka_avoidance/examples:rw \
+	   -v "$(pwd)"/config:/home/ros2/config:rw \
+	   -v "$(pwd)"/scripts:/home/ros2/ros2_ws/src/franka_avoidance/scripts:rw \
 	   -v "$(pwd)"/franka_avoidance:/home/ros2/ros2_ws/src/franka_avoidance/franka_avoidance:rw \
+	   -v "$(pwd)"/../various_tools/vartools:/home/ros2/python/various_tools/vartools\
+	   -v "$(pwd)"/../dynamic_obstacle_avoidance/dynamic_obstacle_avoidance:/home/ros2/python/dynamic_obstacle_avoidance/dynamic_obstacle_avoidance\
+	   -v "$(pwd)"/../dynamic_obstacle_avoidance/tests:/home/ros2/python/dynamic_obstacle_avoidance/tests\
 	   -v "$(pwd)"/../nonlinear_obstacle_avoidance/scripts:/home/ros2/python/nonlinear_obstacle_avoidance/scripts:rw \
-	   -v "$(pwd)"/../nonlinear_obstacle_avoidance/roam:/home/ros2/python/nonlinear_obstacle_avoidance/roam:rw \
-	   -v "$(pwd)"/../various_tools/vartools:/home/ros2/python/various_tools/vartools:rw \
-	   -v "$(pwd)"/../various_tools/tests:/home/ros2/python/various_tools/tests:rw \
-	   -v "$(pwd)"/../dynamic_obstacle_avoidance/dynamic_obstacle_avoidance:/home/ros2/python/dynamic_obstacle_avoidance/dynamic_obstacle_avoidance:rw \
+	   -v "$(pwd)"/../nonlinear_obstacle_avoidance/nonlinear_avoidance:/home/ros2/python/nonlinear_obstacle_avoidance/nonlinear_avoidance:rw \
+	   -v "$(pwd)"/../obstacle_aware_damping/docker_scripts:/home/ros2/ros2_ws/src/franka_avoidance/project_thibaud/docker_scripts:rw \
+	   -v "$(pwd)"/../obstacle_aware_damping/passive_control/:/home/ros2/ros2_ws/src/franka_avoidance/project_thibaud/passive_control:rw \
 	   ros2_franka_avoidance
 
+	    # -v "$(pwd)"/../semester_project_LASA_trinca/docker_scripts:/home/ros2/ros2_ws/src/franka_avoidance/project_thibaud/docker_scripts:rw \
+	   # -v "$(pwd)"/../semester_project_LASA_trinca/librairies:/home/ros2/ros2_ws/src/franka_avoidance/project_thibaud/librairies:rw \
 # Get sourceof ocntrol libary
 # -v "$(pwd)"/libs/control-libraries:/home/ros2/control-libraries:rw \
 

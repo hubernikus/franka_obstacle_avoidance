@@ -141,7 +141,7 @@ def create_circular_conveyer_dynamics():
     #     reference_velocity=lambda x: x - self.dynamic_dynamics.position,
     # )
 
-    return dynamics
+    # return dynamics
 
 
 def create_rviz_handler(optitrack_obstacles):

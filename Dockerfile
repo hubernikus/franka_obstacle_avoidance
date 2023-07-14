@@ -72,7 +72,7 @@ RUN mkdir -p /home/${USER}/ros2_ws/src/franka_avoidance
 
 # Semester-Project-Avoiding [Thibaud]
 WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance/
-RUN git clone -b main --single-branch https://github.com/TicaGit/semester_project_LASA_trinca.git project_thibaud
+RUN git clone -b main --single-branch https://github.com/hubernikus/obstacle_aware_damping.git project_thibaud
 WORKDIR /home/${USER}/ros2_ws/src/franka_avoidance/project_thibaud
 RUN python3 -m pip install --editable .
 # RUN python3 -m pip install -r requirements.txt
